@@ -7,8 +7,9 @@ module.exports = defineConfig([
   // Add rules for spacing for tsx and ts files
   {
     rules: {
-      "react/jsx-indent": "error",
-      "react/jsx-indent-props": "error",
+      indent: ["error", 2],
+      "react/jsx-indent": ["error", 2],
+      "react/jsx-indent-props": ["error", 2],
     },
   },
   {

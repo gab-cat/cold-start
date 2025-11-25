@@ -1,98 +1,191 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from "react";
+import { ScrollView, View, StyleSheet, ActivityIndicator } from "react-native";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useUser } from "@clerk/clerk-expo";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { StatCard } from "@/components/StatCard";
+import { StreakBadge } from "@/components/StreakBadge";
+import { GoalProgress } from "@/components/GoalProgress";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function DashboardScreen() {
+  const { user } = useUser();
 
-export default function HomeScreen() {
+  // Get current user from Convex
+  const currentUser = useQuery(api.users.getCurrentUser);
+
+  // Real-time queries - automatically update when data changes
+  const todayStats = useQuery(
+    api.dashboard.getToday,
+    currentUser ? { userId: currentUser._id } : "skip"
+  );
+  const weeklyStats = useQuery(
+    api.dashboard.getWeekly,
+    currentUser ? { userId: currentUser._id } : "skip"
+  );
+  const streaks = useQuery(
+    api.dashboard.getStreaks,
+    currentUser ? { userId: currentUser._id } : "skip"
+  );
+  const goals = useQuery(
+    api.dashboard.getGoals,
+    currentUser ? { userId: currentUser._id } : "skip"
+  );
+
+  if (!currentUser || !todayStats || !weeklyStats) {
+    return (
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+        <ThemedText style={styles.loadingText}>Loading your dashboard...</ThemedText>
+      </ThemedView>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
+    <ScrollView style={styles.container}>
+      {/* Header */}
+      <ThemedView style={styles.header}>
+        <ThemedText type="title" style={styles.title}>
+          Today's Summary
+        </ThemedText>
+        <ThemedText style={styles.subtitle}>
+          Welcome back, {currentUser.displayName || user?.firstName || "there"}!
         </ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+      {/* Quick Stats */}
+      <View style={styles.statsGrid}>
+        <StatCard
+          label="Steps"
+          value={todayStats.steps}
+          target={todayStats.stepGoal}
+          unit="steps"
+        />
+        <StatCard
+          label="Workouts"
+          value={todayStats.workoutCount}
+          unit="completed"
+        />
+        <StatCard
+          label="Water"
+          value={todayStats.water}
+          target={2000}
+          unit="ml"
+        />
+        <StatCard
+          label="Sleep"
+          value={todayStats.sleep}
+          target={8}
+          unit="hours"
+        />
+      </View>
+
+      {/* Streaks */}
+      {streaks && streaks.length > 0 && (
+        <ThemedView style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Active Streaks 🔥
+          </ThemedText>
+          {streaks.map((streak) => (
+            <StreakBadge
+              key={streak._id}
+              streakType={streak.streakType}
+              currentCount={streak.currentCount}
+              maxCount={streak.maxCount}
+            />
+          ))}
+        </ThemedView>
+      )}
+
+      {/* Goals Progress */}
+      {goals && goals.length > 0 && (
+        <ThemedView style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Goals 🎯
+          </ThemedText>
+          {goals.map((goal) => (
+            <GoalProgress
+              key={goal._id}
+              milestone={goal.milestone}
+              currentProgress={goal.currentProgress}
+              goalValue={goal.goalValue}
+              goalUnit={goal.goalUnit}
+            />
+          ))}
+        </ThemedView>
+      )}
+
+      {/* Note: All writes go through Messenger */}
+      <ThemedView style={styles.tipBox}>
+        <ThemedText style={styles.tipText}>
+          💬 <ThemedText style={styles.tipBold}>Pro Tip:</ThemedText> Log your
+          activities via messenger for real-time coaching!
         </ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#6b7280",
+  },
+  header: {
+    padding: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6b7280",
+    marginTop: 4,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    padding: 16,
+    gap: 12,
+  },
+  section: {
+    padding: 16,
+    marginTop: 8,
+    borderRadius: 12,
+    marginHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  tipBox: {
+    padding: 16,
+    margin: 16,
+    borderRadius: 12,
+    backgroundColor: "#dbeafe",
+  },
+  tipText: {
+    fontSize: 14,
+    color: "#1e40af",
+  },
+  tipBold: {
+    fontWeight: "600",
   },
 });
