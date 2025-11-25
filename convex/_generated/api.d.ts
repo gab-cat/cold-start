@@ -8,13 +8,20 @@
  * @module
  */
 
+import type * as actions_articles from "../actions/articles.js";
 import type * as actions_embeddings from "../actions/embeddings.js";
+import type * as actions_goalGeneration from "../actions/goalGeneration.js";
+import type * as actions_googleSearch from "../actions/googleSearch.js";
 import type * as actions_messenger from "../actions/messenger.js";
+import type * as actions_recommendations from "../actions/recommendations.js";
 import type * as activities from "../activities.js";
+import type * as agentQueries from "../agentQueries.js";
 import type * as ai_agentReasoning from "../ai/agentReasoning.js";
 import type * as ai_intentParser from "../ai/intentParser.js";
 import type * as ai_ragRetrieval from "../ai/ragRetrieval.js";
+import type * as articles from "../articles.js";
 import type * as clerkWebhook from "../clerkWebhook.js";
+import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as embeddings from "../embeddings.js";
 import type * as goals from "../goals.js";
@@ -22,8 +29,10 @@ import type * as http from "../http.js";
 import type * as internalMutations from "../internalMutations.js";
 import type * as messengerConversations from "../messengerConversations.js";
 import type * as rag from "../rag.js";
+import type * as recommendations from "../recommendations.js";
 import type * as streaks from "../streaks.js";
 import type * as users from "../users.js";
+import type * as utils from "../utils.js";
 import type * as webhookEvents from "../webhookEvents.js";
 
 import type {
@@ -33,13 +42,20 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actions/articles": typeof actions_articles;
   "actions/embeddings": typeof actions_embeddings;
+  "actions/goalGeneration": typeof actions_goalGeneration;
+  "actions/googleSearch": typeof actions_googleSearch;
   "actions/messenger": typeof actions_messenger;
+  "actions/recommendations": typeof actions_recommendations;
   activities: typeof activities;
+  agentQueries: typeof agentQueries;
   "ai/agentReasoning": typeof ai_agentReasoning;
   "ai/intentParser": typeof ai_intentParser;
   "ai/ragRetrieval": typeof ai_ragRetrieval;
+  articles: typeof articles;
   clerkWebhook: typeof clerkWebhook;
+  crons: typeof crons;
   dashboard: typeof dashboard;
   embeddings: typeof embeddings;
   goals: typeof goals;
@@ -47,8 +63,10 @@ declare const fullApi: ApiFromModules<{
   internalMutations: typeof internalMutations;
   messengerConversations: typeof messengerConversations;
   rag: typeof rag;
+  recommendations: typeof recommendations;
   streaks: typeof streaks;
   users: typeof users;
+  utils: typeof utils;
   webhookEvents: typeof webhookEvents;
 }>;
 

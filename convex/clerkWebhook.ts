@@ -1,5 +1,6 @@
-import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { internalMutation } from "./_generated/server";
+import { generateUniqueCode } from "./utils";
 
 // Handle user.created event from Clerk
 export const handleUserCreated = internalMutation({
@@ -17,10 +18,13 @@ export const handleUserCreated = internalMutation({
 
     const now = Date.now();
 
+    const uniqueCode = generateUniqueCode();
+
     return await ctx.db.insert("users", {
       clerkId: args.clerkId,
       email: args.email,
       displayName,
+      uniqueCode,
       messengerPsid: undefined,
       healthProfile: {
         age: undefined,
@@ -28,11 +32,12 @@ export const handleUserCreated = internalMutation({
         fitnessLevel: undefined,
         goals: undefined,
         injuries: undefined,
+        underlyingConditions: undefined,
       },
       preferences: {
         preferredTimezone: undefined,
         preferredActivities: undefined,
-        notificationFrequency: undefined,
+        notificationTypes: undefined,
         language: undefined,
       },
       createdAt: now,

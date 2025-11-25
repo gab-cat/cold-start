@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import { action } from "../_generated/server";
 import { runAgentReasoning } from "../ai/agentReasoning";
 import { parseUserIntent } from "../ai/intentParser";
@@ -15,17 +15,50 @@ export const processMessage = action({
   handler: async (ctx, args) => {
     try {
       // Step 1: Fetch or create user
-      const user = await ctx.runQuery(
+      let user = await ctx.runQuery(
         internal.users.getUserByMessengerIdInternal,
         { messengerPsid: args.senderPsid }
       );
 
       if (!user) {
-        // New user - send onboarding
-        await sendMessengerMessage(
-          args.senderPsid,
-          "Welcome to WellBuddy! 🎉 I'm your AI wellness coach. Let's get started by saying what you're tracking today."
-        );
+        // Check if the message is a unique code (8 chars, alphanumeric)
+        const potentialCode = args.userMessage.trim().toUpperCase();
+        if (/^[A-Z0-9]{8}$/.test(potentialCode)) {
+          // Attempt to link
+          const linkResult = await ctx.runMutation(internal.users.linkMessengerPsidByCode, {
+            uniqueCode: potentialCode,
+            messengerPsid: args.senderPsid,
+          });
+
+          if (linkResult.success) {
+            await sendMessengerMessage(
+              args.senderPsid,
+              `Welcome ${linkResult.userDisplayName}! 🎉 Your account has been successfully linked. I'm your AI wellness coach. How can I help you today?`
+            );
+            // Fetch the user again now that they are linked
+            user = await ctx.runQuery(
+              internal.users.getUserByMessengerIdInternal,
+              { messengerPsid: args.senderPsid }
+            );
+          } else {
+            await sendMessengerMessage(
+              args.senderPsid,
+              "That code doesn't seem to be valid. Please check your profile in the app and try again."
+            );
+            return;
+          }
+        } else {
+          // New user - ask for code
+          await sendMessengerMessage(
+            args.senderPsid,
+            "Welcome to WellBuddy! 👋 To get started, please enter the 8-character unique code from your profile in the app."
+          );
+          return;
+        }
+      }
+
+      if (!user) {
+        // Should not happen if linking was successful, but just in case
         return;
       }
 
@@ -49,10 +82,53 @@ export const processMessage = action({
         user
       );
 
+      // Step 4.5: Execute any data queries the agent requested
+      let queryResults = {};
+      if (agentResponse.actions && agentResponse.actions.length > 0) {
+        for (const actionItem of agentResponse.actions) {
+          if (actionItem.mutation.startsWith("agentQueries.")) {
+            try {
+              const queryName = actionItem.mutation.replace("agentQueries.", "");
+              const result = await ctx.runQuery(
+                `internal.agentQueries.${queryName}` as any,
+                { userId: user._id, ...actionItem.params }
+              );
+              queryResults = { ...queryResults, [queryName]: result };
+            } catch (queryError) {
+              console.error(`Error executing query ${actionItem.mutation}:`, queryError);
+            }
+          }
+        }
+      }
+
       // Step 5: Execute actions via internal mutations
       const actionResults = [];
       for (const actionItem of agentResponse.actions) {
         try {
+          // For meal activities, try to get calorie information from Google Search
+          if (actionItem.mutation === "userActivity.log" &&
+              actionItem.params.activityType === "meal" &&
+              actionItem.params.mealDescription &&
+              !actionItem.params.caloriesConsumed) {
+
+            try {
+              const calorieInfo = await ctx.runAction(
+                api.actions.googleSearch.searchFoodCalories,
+                {
+                  foodName: actionItem.params.mealDescription,
+                }
+              );
+
+              if (calorieInfo && calorieInfo.caloriesPerServing > 0) {
+                actionItem.params.caloriesConsumed = calorieInfo.caloriesPerServing;
+                console.log(`Found calories for ${calorieInfo.foodName}: ${calorieInfo.caloriesPerServing} per ${calorieInfo.servingSize}`);
+              }
+            } catch (calorieError) {
+              console.error("Error looking up food calories:", calorieError);
+              // Continue without calorie data - it's optional
+            }
+          }
+
           const result = await ctx.runMutation(
             internal.internalMutations.executeAgentAction,
             {

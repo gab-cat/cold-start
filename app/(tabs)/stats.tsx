@@ -1,15 +1,19 @@
-import React from "react";
-import { ScrollView, View, StyleSheet, ActivityIndicator } from "react-native";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useUser } from "@clerk/clerk-expo";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import { StatCard } from "@/components/StatCard";
+import { AIBackground } from "@/components/ui/AIBackground";
+import { Card } from "@/components/ui/Card";
+import { Header } from "@/components/ui/Header";
+import { WiseColors } from "@/constants/theme";
+import { api } from "@/convex/_generated/api";
+import { useQuery } from "convex/react";
+import React from "react";
+import { ActivityIndicator, Dimensions, ScrollView, Text, View } from "react-native";
+import Svg, { Line, Rect, Text as SvgText } from "react-native-svg";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const CHART_HEIGHT = 200;
+const CHART_PADDING = 40;
 
 export default function StatsScreen() {
-  const { user } = useUser();
-
   // Get current user from Convex
   const currentUser = useQuery(api.users.getCurrentUser);
 
@@ -21,10 +25,12 @@ export default function StatsScreen() {
 
   if (!currentUser || !weeklyStats) {
     return (
-      <ThemedView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
-        <ThemedText style={styles.loadingText}>Loading stats...</ThemedText>
-      </ThemedView>
+      <View className="flex-1 justify-center items-center bg-wise-background">
+        <ActivityIndicator size="large" color={WiseColors.primary} />
+        <Text className="mt-4 font-sans-medium text-base text-wise-text-secondary">
+          Loading stats...
+        </Text>
+      </View>
     );
   }
 
@@ -41,140 +47,140 @@ export default function StatsScreen() {
 
   const avgSleep = weeklyStats.length > 0 ? weeklyTotals.sleep / weeklyStats.length : 0;
 
+  // Chart Data Preparation
+  const maxSteps = Math.max(...weeklyStats.map(d => d.steps), 10000);
+  const chartWidth = SCREEN_WIDTH - 24 * 2 - CHART_PADDING;
+  const barWidth = (chartWidth / 7) * 0.6;
+  const spacing = (chartWidth / 7) * 0.4;
+
   return (
-    <ScrollView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <ThemedText type="title" style={styles.title}>
-          Weekly Stats
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          7-day overview
-        </ThemedText>
-      </ThemedView>
+    <View className="flex-1 bg-wise-background">
+      <AIBackground className="flex-1">
+        <Header title="Your Progress" subtitle="Weekly Overview" showAvatar={false} />
+        <ScrollView 
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Weekly Chart */}
+          <Card className="mx-6 mb-6" padding="lg">
+            <Text className="font-archivo-bold text-lg text-wise-text mb-4">
+              Steps Activity
+            </Text>
+            <View className="items-center pb-2">
+              <Svg height={CHART_HEIGHT} width={SCREEN_WIDTH - 24 * 2}>
+                {/* Grid Lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((tick, i) => (
+                  <Line
+                    key={i}
+                    x1="0"
+                    y1={CHART_HEIGHT - tick * CHART_HEIGHT}
+                    x2={chartWidth}
+                    y2={CHART_HEIGHT - tick * CHART_HEIGHT}
+                    stroke={WiseColors.border}
+                    strokeDasharray="4 4"
+                    strokeWidth="1"
+                  />
+                ))}
 
-      {/* Weekly Totals */}
-      <View style={styles.statsGrid}>
-        <StatCard
-          label="Total Steps"
-          value={weeklyTotals.steps}
-          unit="steps"
-        />
-        <StatCard
-          label="Workouts"
-          value={weeklyTotals.workouts}
-          unit="completed"
-        />
-        <StatCard
-          label="Water"
-          value={weeklyTotals.water}
-          unit="ml"
-        />
-        <StatCard
-          label="Avg Sleep"
-          value={Math.round(avgSleep * 10) / 10}
-          unit="hours"
-        />
-      </View>
-
-      {/* Daily Breakdown */}
-      <ThemedView style={styles.section}>
-        <ThemedText type="subtitle" style={styles.sectionTitle}>
-          Daily Breakdown
-        </ThemedText>
-        {weeklyStats.map((day, index) => (
-          <ThemedView key={index} style={styles.dayRow}>
-            <ThemedText style={styles.dayLabel}>
-              {new Date(day.date).toLocaleDateString("en-US", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-              })}
-            </ThemedText>
-            <View style={styles.dayStats}>
-              <ThemedText style={styles.dayStat}>
-                {day.steps} steps
-              </ThemedText>
-              <ThemedText style={styles.dayStat}>
-                {day.workouts} workouts
-              </ThemedText>
-              <ThemedText style={styles.dayStat}>
-                {day.water}ml water
-              </ThemedText>
+                {/* Bars */}
+                {weeklyStats.map((day, index) => {
+                  const height = (day.steps / maxSteps) * (CHART_HEIGHT - 20);
+                  const x = index * (barWidth + spacing);
+                  return (
+                    <React.Fragment key={index}>
+                      <Rect
+                        x={x}
+                        y={CHART_HEIGHT - height}
+                        width={barWidth}
+                        height={height}
+                        fill={WiseColors.primary}
+                        rx={4}
+                      />
+                      <SvgText
+                        x={x + barWidth / 2}
+                        y={CHART_HEIGHT + 15}
+                        fontSize="10"
+                        fill={WiseColors.textSecondary}
+                        textAnchor="middle"
+                      >
+                        {new Date(day.date).toLocaleDateString("en-US", { weekday: "narrow" })}
+                      </SvgText>
+                    </React.Fragment>
+                  );
+                })}
+              </Svg>
             </View>
-          </ThemedView>
-        ))}
-      </ThemedView>
-    </ScrollView>
+          </Card>
+
+          {/* Weekly Totals Grid */}
+          <View className="px-6 mb-6">
+            <View className="flex-row gap-4 mb-4">
+              <StatCard
+                label="Total Steps"
+                value={weeklyTotals.steps}
+                unit="steps"
+                color={WiseColors.primary}
+              />
+              <StatCard
+                label="Workouts"
+                value={weeklyTotals.workouts}
+                unit="done"
+                color={WiseColors.accent}
+              />
+            </View>
+            <View className="flex-row gap-4">
+              <StatCard
+                label="Total Water"
+                value={weeklyTotals.water}
+                unit="ml"
+                color="#3B82F6"
+              />
+              <StatCard
+                label="Avg Sleep"
+                value={Math.round(avgSleep * 10) / 10}
+                unit="hrs"
+                color="#8B5CF6"
+              />
+            </View>
+          </View>
+
+          {/* Daily Breakdown List */}
+          <View className="px-6 mb-8">
+            <Text className="font-archivo-bold text-xl text-wise-text mb-4">
+              Daily Breakdown
+            </Text>
+            <Card padding="none" className="overflow-hidden">
+              {weeklyStats.map((day, index) => (
+                <View key={index} className={`flex-row p-4 items-center ${index !== weeklyStats.length - 1 ? 'border-b border-wise-border' : ''}`}>
+                  <View className="w-[60px]">
+                    <Text className="font-sans-bold text-base text-wise-text">
+                      {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" })}
+                    </Text>
+                    <Text className="font-sans text-xs text-wise-text-secondary">
+                      {new Date(day.date).toLocaleDateString("en-US", { day: "numeric", month: "short" })}
+                    </Text>
+                  </View>
+                  
+                  <View className="flex-1 flex-row justify-end gap-6">
+                    <View className="items-end">
+                      <Text className="font-archivo-bold text-base text-wise-text">{day.steps}</Text>
+                      <Text className="font-sans text-xs text-wise-text-secondary">steps</Text>
+                    </View>
+                    <View className="items-end">
+                      <Text className="font-archivo-bold text-base text-wise-text">{day.workouts}</Text>
+                      <Text className="font-sans text-xs text-wise-text-secondary">workouts</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </Card>
+          </View>
+          
+          <View className="h-10" />
+        </ScrollView>
+      </AIBackground>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#6b7280",
-  },
-  header: {
-    padding: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6b7280",
-    marginTop: 4,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 16,
-    gap: 12,
-  },
-  section: {
-    padding: 16,
-    marginTop: 8,
-    borderRadius: 12,
-    marginHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  dayRow: {
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  dayLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  dayStats: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  dayStat: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-});
 

@@ -1,110 +1,100 @@
-import { useSignUp } from '@clerk/clerk-expo'
+import { AIBackground } from '@/components/ui/AIBackground'
+import { Button } from '@/components/ui/Button'
+import { IconSymbol } from '@/components/ui/icon-symbol'
+import { WiseColors } from '@/constants/theme'
+import { useWarmUpBrowser } from '@/hooks/useWarmUpBrowser'
+import { useOAuth } from '@clerk/clerk-expo'
+import { Ionicons } from '@expo/vector-icons'
 import { Link, useRouter } from 'expo-router'
-import * as React from 'react'
-import { Text, TextInput, TouchableOpacity, View } from 'react-native'
+import * as WebBrowser from 'expo-web-browser'
+import React from 'react'
+import { Text, View } from 'react-native'
 
-export default function SignUpScreen() {
-  const { isLoaded, signUp, setActive } = useSignUp()
+WebBrowser.maybeCompleteAuthSession()
+
+export default function SignInScreen() {
+  useWarmUpBrowser()
   const router = useRouter()
+  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' })
+  const [isLoading, setIsLoading] = React.useState(false)
 
-  const [emailAddress, setEmailAddress] = React.useState('')
-  const [password, setPassword] = React.useState('')
-  const [pendingVerification, setPendingVerification] = React.useState(false)
-  const [code, setCode] = React.useState('')
-
-  // Handle submission of sign-up form
-  const onSignUpPress = async () => {
-    if (!isLoaded) return
-
-    // Start sign-up process using email and password provided
+  const onGoogleSignIn = React.useCallback(async () => {
     try {
-      await signUp.create({
-        emailAddress,
-        password,
-      })
-
-      // Send user an email with verification code
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
-
-      // Set 'pendingVerification' to true to display second form
-      // and capture OTP code
-      setPendingVerification(true)
-    } catch (err) {
-      // See https://clerk.com/docs/custom-flows/error-handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
-    }
-  }
-
-  // Handle submission of verification form
-  const onVerifyPress = async () => {
-    if (!isLoaded) return
-
-    try {
-      // Use the code the user provided to attempt verification
-      const signUpAttempt = await signUp.attemptEmailAddressVerification({
-        code,
-      })
-
-      // If verification was completed, set the session to active
-      // and redirect the user
-      if (signUpAttempt.status === 'complete') {
-        await setActive({ session: signUpAttempt.createdSessionId })
+      setIsLoading(true)
+      const { createdSessionId, setActive } = await startOAuthFlow()
+      
+      if (createdSessionId) {
+        setActive!({ session: createdSessionId })
         router.replace('/')
       } else {
-        // If the status is not complete, check why. User may need to
-        // complete further steps.
-        console.error(JSON.stringify(signUpAttempt, null, 2))
+        // Use signIn or signUp for next steps such as MFA
       }
     } catch (err) {
-      // See https://clerk.com/docs/custom-flows/error-handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
+      console.error('OAuth error', err)
+    } finally {
+      setIsLoading(false)
     }
-  }
-
-  if (pendingVerification) {
-    return (
-      <>
-        <Text>Verify your email</Text>
-        <TextInput
-          value={code}
-          placeholder="Enter your verification code"
-          onChangeText={(code) => setCode(code)}
-        />
-        <TouchableOpacity onPress={onVerifyPress}>
-          <Text>Verify</Text>
-        </TouchableOpacity>
-      </>
-    )
-  }
+  }, [startOAuthFlow, router])
 
   return (
-    <View>
-      <>
-        <Text>Sign up</Text>
-        <TextInput
-          autoCapitalize="none"
-          value={emailAddress}
-          placeholder="Enter email"
-          onChangeText={(email) => setEmailAddress(email)}
-        />
-        <TextInput
-          value={password}
-          placeholder="Enter password"
-          secureTextEntry={true}
-          onChangeText={(password) => setPassword(password)}
-        />
-        <TouchableOpacity onPress={onSignUpPress}>
-          <Text>Continue</Text>
-        </TouchableOpacity>
-        <View style={{ display: 'flex', flexDirection: 'row', gap: 3 }}>
-          <Text>Already have an account?</Text>
-          <Link href="/sign-in">
-            <Text>Sign in</Text>
-          </Link>
+    <AIBackground className="flex-1">
+      <View className="flex-1 justify-between p-8">
+        <View className="mt-20">
+          <View className="w-16 h-16 bg-wise-primary/10 rounded-2xl items-center justify-center mb-6">
+            <IconSymbol name="sparkles" size={32} color={WiseColors.primary} />
+          </View>
+          
+          <Text className="font-archivo-bold tracking-[-0.07em] text-7xl text-wise-text mb-4 leading-tight">
+            Unlock your potential.
+          </Text>
+          <Text className="font-sans text-lg text-wise-text-secondary leading-7">
+            Your personal AI fitness companion. Track, analyze, and improve your health with intelligent insights.
+          </Text>
         </View>
-      </>
-    </View>
+
+        <View className="mb-12">
+          <View className="flex-row items-center justify-center mb-8 space-x-8">
+            <View className="items-center mr-2">
+              <View className="w-12 h-12 bg-wise-surface rounded-full items-center justify-center mb-2">
+                <IconSymbol name="figure.run" size={20} color={WiseColors.primary} />
+              </View>
+              <Text className="font-sans-medium text-xs text-wise-text-secondary">Track</Text>
+            </View>
+            <View className="items-center mr-2">
+              <View className="w-12 h-12 bg-wise-surface rounded-full items-center justify-center mb-2">
+                <IconSymbol name="chart.bar.fill" size={20} color="#8B5CF6" />
+              </View>
+              <Text className="font-sans-medium text-xs text-wise-text-secondary">Analyze</Text>
+            </View>
+            <View className="items-center mr-2">
+              <View className="w-12 h-12 bg-wise-surface rounded-full items-center justify-center mb-2">
+                <IconSymbol name="bolt.fill" size={20} color="#F59E0B" />
+              </View>
+              <Text className="font-sans-medium text-xs text-wise-text-secondary">Improve</Text>
+            </View>
+          </View>
+
+          <Button 
+            title={isLoading ? "Signing in..." : "Continue with Google"} 
+            onPress={onGoogleSignIn} 
+            icon={<Ionicons name="logo-google" size={20} color="white" style={{ marginRight: 8 }} />}
+            className="w-full shadow-lg"
+            size="md"
+            disabled={isLoading}
+          />
+          
+          <Text className="font-sans text-sm text-wise-text-tertiary text-center mt-6">
+            By continuing, you agree to our{' '}
+            <Link href="/terms" asChild>
+              <Text className="font-sans-medium text-sm text-wise-primary">Terms of Service</Text>
+            </Link>
+            {' '}and{' '}
+            <Link href="/privacy" asChild>
+              <Text className="font-sans-medium text-sm text-wise-primary">Privacy Policy</Text>
+            </Link>.
+          </Text>
+        </View>
+      </View>
+    </AIBackground>
   )
 }

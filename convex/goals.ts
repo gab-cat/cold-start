@@ -1,5 +1,6 @@
 import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 // Get user goals
 export const getUserGoals = query({
@@ -35,6 +36,12 @@ export const createGoal = mutation({
     milestone: v.string(),
     targetDate: v.optional(v.string()),
     aiAdjustable: v.optional(v.boolean()),
+    createdBy: v.optional(v.string()),
+    sourceData: v.optional(v.object({
+      reasoning: v.string(),
+      basedOn: v.array(v.string()),
+      confidence: v.number(),
+    })),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -48,6 +55,8 @@ export const createGoal = mutation({
       status: "active",
       milestone: args.milestone,
       aiAdjustable: args.aiAdjustable ?? false,
+      createdBy: args.createdBy ?? "user",
+      sourceData: args.sourceData,
       createdAt: now,
       updatedAt: now,
     });
@@ -93,6 +102,21 @@ export const updateGoalStatus = mutation({
       status: args.status,
       updatedAt: Date.now(),
     });
+  },
+});
+
+// Generate AI goals for a user
+export const generateAIGoals = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; message: string }> => {
+    // Schedule the AI goal generation action to run after this mutation completes
+    await ctx.scheduler.runAfter(0, api.actions.goalGeneration.generatePersonalizedGoals, {});
+    return {
+      success: true,
+      message: "Goal generation has been scheduled"
+    };
   },
 });
 

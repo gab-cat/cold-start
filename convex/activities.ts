@@ -1,5 +1,6 @@
 import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 // Log an activity
 export const logActivity = mutation({
@@ -10,12 +11,15 @@ export const logActivity = mutation({
     durationMinutes: v.optional(v.number()),
     distanceKm: v.optional(v.number()),
     caloriesBurned: v.optional(v.number()),
+    caloriesConsumed: v.optional(v.number()),
     intensity: v.optional(v.string()),
     hydrationMl: v.optional(v.number()),
     sleepHours: v.optional(v.number()),
     sleepQuality: v.optional(v.string()),
     mealType: v.optional(v.string()),
     mealDescription: v.optional(v.string()),
+    timeStarted: v.optional(v.number()),
+    timeEnded: v.optional(v.number()),
     mood: v.optional(v.string()),
     notes: v.string(),
     loggedAt: v.optional(v.number()),
@@ -23,25 +27,76 @@ export const logActivity = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    return await ctx.db.insert("activities", {
+
+    // Auto-calculate duration from timeStarted and timeEnded if not provided
+    let durationMinutes = args.durationMinutes;
+    if (!durationMinutes && args.timeStarted && args.timeEnded) {
+      durationMinutes = Math.round((args.timeEnded - args.timeStarted) / (1000 * 60));
+    }
+
+    const loggedAt = args.loggedAt || now;
+
+    const activityId = await ctx.db.insert("activities", {
       userId: args.userId,
       activityType: args.activityType,
       activityName: args.activityName,
-      durationMinutes: args.durationMinutes,
+      durationMinutes,
       distanceKm: args.distanceKm,
       caloriesBurned: args.caloriesBurned,
+      caloriesConsumed: args.caloriesConsumed,
       intensity: args.intensity,
       hydrationMl: args.hydrationMl,
       sleepHours: args.sleepHours,
       sleepQuality: args.sleepQuality,
       mealType: args.mealType,
       mealDescription: args.mealDescription,
+      timeStarted: args.timeStarted,
+      timeEnded: args.timeEnded,
       mood: args.mood,
       notes: args.notes,
-      loggedAt: args.loggedAt || now,
+      loggedAt,
       sourceType: args.sourceType,
       createdAt: now,
     });
+
+    // Update goal progress based on this activity
+    try {
+      await ctx.runMutation(internal.internalMutations.updateGoalProgressForActivityMutation, {
+        userId: args.userId,
+        activityType: args.activityType,
+        activityData: {
+          sleepHours: args.sleepHours,
+          hydrationMl: args.hydrationMl,
+          distanceKm: args.distanceKm,
+          caloriesBurned: args.caloriesBurned,
+        },
+        loggedAt,
+      });
+    } catch (error) {
+      // Log error but don't fail the activity insertion
+      console.error("Error updating goal progress:", error);
+    }
+
+    // Create activity summary embedding every ~10 activities or daily
+    const userActivities = await ctx.db
+      .query("activities")
+      .withIndex("by_user_date", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (userActivities.length % 10 === 0) { // Every 10 activities
+      const recentStats = await ctx.runQuery(internal.agentQueries.getActivityStats, {
+        userId: args.userId,
+        days: 7
+      });
+
+      await ctx.runMutation(internal.internalMutations.createActivitySummaryEmbedding, {
+        userId: args.userId,
+        period: "weekly",
+        summaryData: recentStats,
+      });
+    }
+
+    return activityId;
   },
 });
 

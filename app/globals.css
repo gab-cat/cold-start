@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  /* Archivo font family - for headings/titles */
+  .font-archivo {
+    font-family: Archivo_400Regular;
+  }
+  .font-archivo-semibold {
+    font-family: Archivo_600SemiBold;
+  }
+  .font-archivo-bold {
+    font-family: Archivo_700Bold;
+  }
+
+  /* DM Sans font family - for body text */
+  .font-sans {
+    font-family: DMSans_400Regular;
+  }
+  .font-sans-medium {
+    font-family: DMSans_500Medium;
+    font-weight: 500;
+  }
+  .font-sans-bold {
+    font-family: DMSans_700Bold;
+    font-weight: 700;
+  }
+}

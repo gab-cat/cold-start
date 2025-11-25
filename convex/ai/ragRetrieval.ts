@@ -33,11 +33,41 @@ export async function retrieveUserContext(
     // Fallback: use empty vector
   }
 
-  // 2. Retrieve similar embeddings from database (RAG)
-  const allEmbeddings = await ctx.db
+  // 2. Retrieve relevant embeddings from database (RAG)
+  // Prioritize different content types based on query
+  const profileEmbeddings = await ctx.db
     .query("embeddings")
-    .withIndex("by_user_content", (q: any) => q.eq("userId", userId as any))
-    .collect();
+    .withIndex("by_user_content", (q: any) =>
+      q.eq("userId", userId as any).eq("contentType", "profile_update")
+    )
+    .order("desc")
+    .take(3);
+
+  const goalEmbeddings = await ctx.db
+    .query("embeddings")
+    .withIndex("by_user_content", (q: any) =>
+      q.eq("userId", userId as any).eq("contentType", "goal_context")
+    )
+    .order("desc")
+    .take(3);
+
+  const activityEmbeddings = await ctx.db
+    .query("embeddings")
+    .withIndex("by_user_content", (q: any) =>
+      q.eq("userId", userId as any).eq("contentType", "activity_summary")
+    )
+    .order("desc")
+    .take(3);
+
+  const healthEmbeddings = await ctx.db
+    .query("embeddings")
+    .withIndex("by_user_content", (q: any) =>
+      q.eq("userId", userId as any).eq("contentType", "health_note")
+    )
+    .order("desc")
+    .take(2);
+
+  const allEmbeddings = [...profileEmbeddings, ...goalEmbeddings, ...activityEmbeddings, ...healthEmbeddings];
 
   // Simple cosine similarity search
   const scored = allEmbeddings.map((emb: Doc<"embeddings">) => ({

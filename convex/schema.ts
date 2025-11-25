@@ -7,6 +7,7 @@ export default defineSchema({
     clerkId: v.string(),
     email: v.string(),
     displayName: v.string(),
+    uniqueCode: v.string(), // Unique code for Messenger linking
     messengerPsid: v.optional(v.string()), // Facebook Page-Scoped ID
     healthProfile: v.object({
       age: v.optional(v.number()),
@@ -14,33 +15,49 @@ export default defineSchema({
       fitnessLevel: v.optional(v.string()), // 'beginner' | 'intermediate' | 'advanced'
       goals: v.optional(v.array(v.string())), // ['lose_weight', 'build_strength', 'improve_endurance']
       injuries: v.optional(v.string()),
+      underlyingConditions: v.optional(v.string()),
+      height: v.optional(v.number()), // Height in cm
+      weight: v.optional(v.number()), // Weight in kg
     }),
     preferences: v.object({
       preferredTimezone: v.optional(v.string()),
       preferredActivities: v.optional(v.array(v.string())),
-      notificationFrequency: v.optional(v.string()), // 'frequent' | 'moderate' | 'rare'
+      notificationTypes: v.optional(v.array(v.string())), // ['push'] | ['messenger'] | ['push', 'messenger'] | []
       language: v.optional(v.string()), // 'en' | 'tl' (Tagalog Phase 2)
     }),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_clerk_id", ["clerkId"])
+    .index("by_unique_code", ["uniqueCode"])
     .index("by_messenger_psid", ["messengerPsid"]),
 
   // ============ ACTIVITY TRACKING ============
   activities: defineTable({
     userId: v.id("users"),
-    activityType: v.string(), // 'workout' | 'walk' | 'run' | 'yoga' | 'sleep' | 'hydration' | 'meal'
-    activityName: v.string(), // 'Morning run', '8-hour sleep', '2L water', etc
+    // Activity type categories:
+    // Exercise: 'workout' | 'walk' | 'run' | 'cycle' | 'swim' | 'yoga' | 'gym' | 'meditation' | 'stretch'
+    // Wellness: 'sleep' | 'hydration' | 'meal'
+    // Leisure: 'gaming' | 'computer' | 'reading' | 'tv' | 'music' | 'social' | 'hobby' | 'leisure'
+    // Errands/Tasks: 'errand' | 'task' | 'shopping' | 'study'
+    activityType: v.string(),
+    activityName: v.string(), // 'Morning run', '8-hour sleep', '2L water', 'Gaming session', etc
     durationMinutes: v.optional(v.number()),
     distanceKm: v.optional(v.number()),
     caloriesBurned: v.optional(v.number()),
+    caloriesConsumed: v.optional(v.number()), // For meal activities (separate from burned)
     intensity: v.optional(v.string()), // 'light' | 'moderate' | 'vigorous'
     hydrationMl: v.optional(v.number()),
     sleepHours: v.optional(v.number()),
     sleepQuality: v.optional(v.string()), // 'poor' | 'fair' | 'good' | 'excellent'
     mealType: v.optional(v.string()), // 'breakfast' | 'lunch' | 'dinner' | 'snack'
     mealDescription: v.optional(v.string()), // "Grilled chicken with rice"
+    // Leisure activity metrics
+    screenTimeMinutes: v.optional(v.number()), // For gaming, computer, tv activities
+    pagesRead: v.optional(v.number()), // For reading activities
+    socialInteractions: v.optional(v.number()), // For social activities
+    timeStarted: v.optional(v.number()), // When activity actually started
+    timeEnded: v.optional(v.number()), // When activity actually ended
     mood: v.optional(v.string()), // 'bad' | 'neutral' | 'good' | 'excellent'
     notes: v.string(), // "Felt great today", etc
     loggedAt: v.number(), // Timestamp user provided (might be past)
@@ -66,14 +83,20 @@ export default defineSchema({
   // ============ GOALS ============
   userGoals: defineTable({
     userId: v.id("users"),
-    goalType: v.string(), // 'steps_daily' | 'workouts_weekly' | 'weight_loss' | 'sleep_target' | 'hydration_daily'
+    goalType: v.string(), // 'steps_daily' | 'workouts_weekly' | 'weight_loss' | 'sleep_target' | 'hydration_daily' | 'height_target'
     goalValue: v.number(), // 10000 steps, 3 workouts, 8 hours sleep, etc
-    goalUnit: v.string(), // 'steps' | 'workouts' | 'kg' | 'hours' | 'ml'
+    goalUnit: v.string(), // 'steps' | 'workouts' | 'kg' | 'hours' | 'ml' | 'cm'
     currentProgress: v.number(),
     targetDate: v.optional(v.string()), // 'YYYY-MM-DD'
     status: v.string(), // 'active' | 'completed' | 'paused'
     milestone: v.string(), // "Consistent 30-min walks for 3 weeks"
     aiAdjustable: v.boolean(), // Whether agent can auto-adjust this goal
+    createdBy: v.string(), // 'user' | 'ai' - who created this goal
+    sourceData: v.optional(v.object({
+      reasoning: v.string(), // AI reasoning for goal creation
+      basedOn: v.array(v.string()), // What data influenced the goal ('profile', 'activities', 'streaks', etc.)
+      confidence: v.number(), // 0-1 confidence score
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -82,12 +105,13 @@ export default defineSchema({
   // ============ EMBEDDINGS CACHE (For RAG) ============
   embeddings: defineTable({
     userId: v.id("users"),
-    contentType: v.string(), // 'activity_summary' | 'goal_context' | 'health_note' | 'preference'
+    contentType: v.string(), // 'activity_summary' | 'goal_context' | 'health_note' | 'preference' | 'profile_update' | 'goal_generation_context'
     contentChunk: v.string(), // Text to embed (limited size)
     embeddingVector: v.array(v.float64()), // Vector from Gemini (text-embedding-004 = 768 dimensions)
     metadata: v.object({
       date: v.string(),
       relatedActivityId: v.optional(v.string()),
+      relatedGoalId: v.optional(v.string()),
       confidence: v.number(), // 0-1
     }),
     createdAt: v.number(),
@@ -117,6 +141,7 @@ export default defineSchema({
         params: v.any(),
         success: v.boolean(),
         error: v.optional(v.string()),
+        result: v.optional(v.any()), // Result from successful mutation (e.g., document ID)
       })
     ),
     createdAt: v.number(),
@@ -139,5 +164,37 @@ export default defineSchema({
   })
     .index("by_status", ["processingStatus"])
     .index("by_user", ["userId"]),
+
+  // ============ AI RECOMMENDATIONS ============
+  recommendations: defineTable({
+    userId: v.id("users"),
+    type: v.string(), // 'daily_insight' | 'weekly_recommendation' | 'goal_suggestion'
+    title: v.string(),
+    content: v.string(),
+    generatedAt: v.number(),
+    readAt: v.optional(v.number()),
+    metadata: v.any(), // AI reasoning, related activities, etc.
+  })
+    .index("by_user_recent", ["userId", "generatedAt"])
+    .index("by_user_unread", ["userId", "readAt"]),
+
+  // ============ ARTICLES ============
+  articles: defineTable({
+    title: v.string(),
+    description: v.optional(v.string()),
+    url: v.string(),
+    urlToImage: v.optional(v.string()),
+    content: v.optional(v.string()),
+    author: v.optional(v.string()),
+    publishedAt: v.string(), // ISO date string
+    source: v.object({
+      id: v.optional(v.string()),
+      name: v.string(),
+    }),
+    category: v.string(), // 'workout', 'nutrition', 'mental_health', 'general'
+    fetchedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_publishedAt", ["publishedAt"]),
 });
 

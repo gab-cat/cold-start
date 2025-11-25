@@ -1,13 +1,19 @@
-import React from "react";
-import { View, StyleSheet } from "react-native";
-import { ThemedText } from "./themed-text";
-import { ThemedView } from "./themed-view";
+import { WiseColors } from "@/constants/theme";
+import React, { useEffect } from "react";
+import { Text, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
 interface GoalProgressProps {
   milestone: string;
   currentProgress: number;
   goalValue: number;
   goalUnit: string;
+  createdBy?: "user" | "ai";
+  sourceData?: {
+    reasoning: string;
+    basedOn: string[];
+    confidence: number;
+  };
 }
 
 export function GoalProgress({
@@ -15,52 +21,59 @@ export function GoalProgress({
   currentProgress,
   goalValue,
   goalUnit,
+  createdBy,
+  sourceData,
 }: GoalProgressProps) {
   const percentage = Math.min((currentProgress / goalValue) * 100, 100);
+  const progressWidth = useSharedValue(0);
+
+  useEffect(() => {
+    progressWidth.value = withDelay(200, withTiming(percentage, { duration: 1000 }));
+  }, [percentage]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      width: `${progressWidth.value}%`,
+    };
+  });
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText style={styles.milestone}>{milestone}</ThemedText>
-        <ThemedText style={styles.progress}>
-          {currentProgress}/{goalValue} {goalUnit}
-        </ThemedText>
+    <View className="mb-6">
+      <View className="flex-row justify-between items-end mb-2">
+        <View className="flex-1">
+          <View className="flex-row items-center gap-2">
+            <Text className="font-sans-bold text-base text-wise-text">
+              {milestone}
+            </Text>
+            {createdBy === "ai" && (
+              <View className="bg-wise-primary/20 px-2 py-0.5 rounded-full">
+                <Text className="font-sans-bold text-xs text-wise-primary">AI</Text>
+              </View>
+            )}
+          </View>
+          {createdBy === "ai" && sourceData && (
+            <Text className="font-sans text-xs text-wise-text-secondary mt-1">
+              Based on: {sourceData.basedOn.join(", ")}
+            </Text>
+          )}
+        </View>
+        <Text className="text-right">
+          <Text className="font-archivo-bold text-base text-wise-primary">
+            {currentProgress}
+          </Text>
+          <Text className="font-sans-medium text-sm text-wise-text-secondary">
+            /{goalValue} {goalUnit}
+          </Text>
+        </Text>
       </View>
-      <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${percentage}%` }]} />
+      
+      <View className="h-2 bg-wise-subtle rounded-full overflow-hidden">
+        <Animated.View 
+          className="h-full rounded-full"
+          style={[animatedStyle, { backgroundColor: WiseColors.success }]} 
+        />
       </View>
-    </ThemedView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  milestone: {
-    fontSize: 16,
-    fontWeight: "600",
-    flex: 1,
-  },
-  progress: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: "#e5e7eb",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#10b981",
-    borderRadius: 4,
-  },
-});
 

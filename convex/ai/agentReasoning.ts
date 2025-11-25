@@ -19,6 +19,13 @@ const StructuredAgentResponseSchema = z.object({
   metadata: z.object({
     reasoning: z.string(),
     confidence: z.number().min(0).max(1),
+    foodCalorieData: z.optional(z.array(z.object({
+      foodName: z.string(),
+      caloriesPerServing: z.number(),
+      servingSize: z.string(),
+      source: z.string(),
+      confidence: z.number(),
+    }))),
   }),
 });
 
@@ -34,7 +41,12 @@ export async function runAgentReasoning(
   const contextSummary = `
 USER PROFILE:
 - Name: ${userProfile.displayName || "User"}
+- Age: ${userProfile.healthProfile?.age || "Not set"}
+- Gender: ${userProfile.healthProfile?.gender || "Not set"}
+- Height: ${userProfile.healthProfile?.height ? `${userProfile.healthProfile.height} cm` : "Not set"}
+- Weight: ${userProfile.healthProfile?.weight ? `${userProfile.healthProfile.weight} kg` : "Not set"}
 - Fitness Level: ${userProfile.healthProfile?.fitnessLevel || "Not set"}
+- Underlying Conditions: ${userProfile.healthProfile?.underlyingConditions || "None"}
 - Active Goals: ${userProfile.healthProfile?.goals?.join(", ") || "None yet"}
 
 RECENT ACTIVITY (Last 7 days):
@@ -72,33 +84,101 @@ PARSED INTENT: ${JSON.stringify(intent)}
 ${contextSummary}
 
 AVAILABLE FUNCTIONS (use these exact mutation names):
-- "userActivity.log": Log a new activity (params: activityType, activityName, durationMinutes?, distanceKm?, caloriesBurned?, intensity?, hydrationMl?, sleepHours?, sleepQuality?, mealType?, mealDescription?, mood?, notes?, loggedAt?)
+- "userActivity.log": Log a new activity
+  REQUIRED params: activityType (e.g., "run", "walk", "sleep", "meal", "shopping", "study", "errand", "task"), activityName (e.g., "Morning Run", "Evening Walk", "Shopping Trip", "Study Session")
+  OPTIONAL params: durationMinutes?, distanceKm?, caloriesBurned?, caloriesConsumed?, intensity?, hydrationMl?, sleepHours?, sleepQuality?, mealType?, mealDescription?, timeStarted?, timeEnded?, mood?, notes?, loggedAt?
+  IMPORTANT: activityName is REQUIRED and must be a descriptive human-readable name for the activity.
+  
+  ACTIVITY TYPE MAPPING:
+  - Shopping/errands: Use activityType "shopping" or "errand" for activities like "went shopping", "grocery shopping", "running errands"
+  - Study/learning: Use activityType "study" or "task" for activities like "studied", "studying", "learning", "homework"
+  - Exercise: "run", "walk", "workout", "yoga", "cycle", "swim", "gym", "meditation", "stretch"
+  - Wellness: "sleep", "hydration", "meal"
+  - Leisure: "gaming", "computer", "reading", "tv", "music", "social", "hobby", "leisure"
+  
+  METRICS EXTRACTION:
+  - Duration: Extract duration from phrases like "for 30 mins", "for 1 hour", "for 2 hours" → durationMinutes
+  - Calories burned: If user mentions calories burned or you can estimate from activity type and duration, include caloriesBurned
+    - Shopping/errands: Estimate ~100-150 calories per hour (light activity)
+    - Study: Estimate ~50-80 calories per hour (sedentary)
+    - Walking during shopping: Estimate ~200-300 calories per hour
+  - Steps: If user mentions steps or walking distance, convert to distanceKm (roughly 1km = 1300 steps)
+    - If user says "walked 5000 steps", calculate: distanceKm = 5000 / 1300 ≈ 3.85
+  - Distance: Extract from phrases like "walked 2km", "walked 1 mile" (convert miles to km: 1 mile = 1.609 km)
+  
+  For MEAL activities: Include caloriesConsumed (calories from food), mealDescription (detailed description), mealType ('breakfast'|'lunch'|'dinner'|'snack')
+  
+  TIME FORMAT: timeStarted and timeEnded accept:
+    - Natural language time strings: "1pm", "2pm", "1:30pm", "13:00", "noon", "midnight" (will be parsed relative to today's date)
+    - ISO date strings: "2024-01-01T13:00:00Z"
+    - Timestamps (numbers): 1704110400000
+    When user mentions times like "from 1pm to 2pm", extract and use those time strings directly.
+  
+  Examples:
+    - activityType: "run", activityName: "Morning Run", timeStarted: "9:00am", timeEnded: "10:00am"
+    - activityType: "walk", activityName: "Evening Walk", timeStarted: "6pm", timeEnded: "7pm"
+    - activityType: "sleep", activityName: "Night Sleep"
+    - activityType: "meal", activityName: "Lunch", mealType: "lunch", mealDescription: "Grilled chicken with rice and vegetables", caloriesConsumed: 650
+    - activityType: "shopping", activityName: "Grocery Shopping", durationMinutes: 60, caloriesBurned: 120, distanceKm: 2.5
+    - activityType: "study", activityName: "Study Session", durationMinutes: 30
+    - activityType: "errand", activityName: "Running Errands", durationMinutes: 45, caloriesBurned: 100, distanceKm: 1.5
 - "userStreaks.update": Update streak count (params: streakType)
 - "userGoals.adjust": Adjust goal values (params: goalId, newValue)
 - "userProfile.updateContext": Update user context (no params needed)
 
-These functions will be executed via internal.internalMutations.executeAgentAction.
+For MEAL activities, try to extract calorie information from the food description. Use Google Search to find accurate calorie data when possible.
+
+AVAILABLE MUTATIONS (for taking actions):
+- "userActivity.log": Log a new activity
+- "userGoals.generateAIGoals": Generate personalized AI goals for the user
+- "userGoals.createGoal": Create a manual goal
+
+AVAILABLE QUERY FUNCTIONS (for answering user questions):
+- "agentQueries.getUserProfile": Get user profile information (health goals, preferences)
+- "agentQueries.getUserActivities": Get user activities with date filtering (startDate?, endDate?, limit?)
+- "agentQueries.getUserGoals": Get user's active and completed goals
+- "agentQueries.getUserStreaks": Get user's current streaks
+- "agentQueries.getActivityStats": Get aggregated stats (days?, default 30 days)
+- "agentQueries.getRecentConversations": Get recent chat history (limit?, default 10)
+- "agentQueries.getUserRecommendations": Get user's AI recommendations
+
+When answering questions about user data, first use the appropriate query function to get current information, then provide the answer based on that data.
 
 Now reason through:
 1. What is the user trying to accomplish?
-2. What does their recent behavior tell us?
-3. What advice or action is most relevant right now?
-4. Are there any concerns (burnout, plateauing, inconsistency)?
-5. What specific mutations/actions should we execute?
+2. Do I need to query user data to answer their question?
+3. What does their recent behavior tell us?
+4. What advice or action is most relevant right now?
+5. Are there any concerns (burnout, plateauing, inconsistency)?
+6. What specific mutations/actions should we execute?
+7. For meals, should I search for calorie information?
 
-Return structured response data.
+Return structured response data with foodCalorieData if meal calories were looked up.
 `;
 
   try {
     const jsonSchema = zodToJsonSchema(StructuredAgentResponseSchema);
 
+    // Check if this might be a meal-related query to enable Google Search
+    const isMealRelated = intent?.type === 'meal' ||
+                         userMessage.toLowerCase().includes('eat') ||
+                         userMessage.toLowerCase().includes('food') ||
+                         userMessage.toLowerCase().includes('calories');
+
+    const config: any = {
+      responseMimeType: "application/json",
+      responseJsonSchema: jsonSchema,
+    };
+
+    // Enable Google Search for meal-related queries
+    if (isMealRelated) {
+      config.tools = [{ googleSearch: {} }];
+    }
+
     const result = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: reasoningPrompt,
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: jsonSchema,
-      },
+      config,
     });
 
     const responseText = result.text;

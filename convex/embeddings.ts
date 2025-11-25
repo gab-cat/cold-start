@@ -43,6 +43,24 @@ export const getAllEmbeddingsForUser = internalQuery({
   },
 });
 
+// Internal query: Get embeddings by content type
+export const getEmbeddingsByContentType = internalQuery({
+  args: {
+    userId: v.id("users"),
+    contentType: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("embeddings")
+      .withIndex("by_user_content", (q) =>
+        q.eq("userId", args.userId).eq("contentType", args.contentType)
+      )
+      .order("desc")
+      .take(args.limit || 10);
+  },
+});
+
 // Internal query: Vector search for similar embeddings
 export const vectorSearchEmbeddings = internalQuery({
   args: {

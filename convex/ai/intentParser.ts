@@ -12,12 +12,21 @@ const ai = new GoogleGenAI({
 const ParsedIntentSchema = z.object({
   intent: z.enum(["log_activity", "ask_advice", "check_status", "set_goal", "other"]),
   activityType: z.union([
-    z.enum(["workout", "walk", "run", "yoga", "sleep", "hydration", "meal"]),
+    z.enum([
+      // Exercise activities
+      "workout", "walk", "run", "yoga", "cycle", "swim", "gym", "meditation", "stretch",
+      // Wellness activities
+      "sleep", "hydration", "meal",
+      // Leisure activities
+      "gaming", "computer", "reading", "tv", "music", "social", "hobby", "leisure",
+      // Errands and tasks
+      "errand", "task", "shopping", "study"
+    ]),
     z.null(),
   ]),
   value: z.union([z.number(), z.null()]),
   unit: z.union([
-    z.enum(["km", "minutes", "hours", "ml", "meals"]),
+    z.enum(["km", "minutes", "hours", "ml", "meals", "pages", "steps"]),
     z.null(),
   ]),
   confidence: z.number().min(0).max(1),
