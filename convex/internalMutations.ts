@@ -91,6 +91,9 @@ export const executeAgentAction = internalMutation({
         sleepQuality: params.sleepQuality,
         mealType: params.mealType,
         mealDescription: params.mealDescription,
+        weightKg: params.weightKg,
+        weightChange: params.weightChange,
+        previousWeightKg: params.previousWeightKg,
         timeStarted,
         timeEnded,
         mood: params.mood,
@@ -142,6 +145,9 @@ export const executeAgentAction = internalMutation({
       return await ctx.db.patch(userId, {
         updatedAt: Date.now(),
       });
+
+    case "userProfile.updateWeight":
+      return await updateUserWeight(ctx, userId, params.weightKg, params.weightChange);
 
     default:
       throw new Error(`Unknown mutation: ${actionMutation}`);
@@ -249,6 +255,75 @@ async function adjustGoal(ctx: MutationCtx, userId: Id<"users">, goalIdOrType: a
     updatedAt: Date.now(),
   });
   return validGoalId;
+}
+
+// Helper: Update user weight in profile and update weight goals
+async function updateUserWeight(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  weightKg?: number,
+  weightChange?: number
+): Promise<{ newWeight: number; previousWeight?: number; goalUpdated: boolean }> {
+  const user = await ctx.db.get(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const previousWeight = user.healthProfile?.weight;
+  let newWeight: number;
+
+  // Calculate new weight
+  if (weightKg !== undefined) {
+    // Absolute weight provided
+    newWeight = weightKg;
+  } else if (weightChange !== undefined && previousWeight) {
+    // Relative change provided (negative for loss, positive for gain)
+    newWeight = previousWeight + weightChange;
+  } else if (weightChange !== undefined) {
+    // Weight change provided but no previous weight - can't calculate
+    throw new Error("Cannot calculate new weight: no previous weight on record. Please provide your current weight.");
+  } else {
+    throw new Error("Either weightKg or weightChange must be provided");
+  }
+
+  // Update user profile with new weight
+  await ctx.db.patch(userId, {
+    healthProfile: {
+      ...user.healthProfile,
+      weight: newWeight,
+    },
+    updatedAt: Date.now(),
+  });
+
+  // Update any active weight_loss goals
+  let goalUpdated = false;
+  const weightGoal = await ctx.db
+    .query("userGoals")
+    .withIndex("by_user_status", (q) =>
+      q.eq("userId", userId).eq("status", "active")
+    )
+    .filter((q) => q.eq(q.field("goalType"), "weight_loss"))
+    .first();
+
+  if (weightGoal) {
+    await ctx.db.patch(weightGoal._id, {
+      currentProgress: newWeight,
+      updatedAt: Date.now(),
+    });
+    goalUpdated = true;
+
+    // Check if goal is completed (current weight <= target weight for weight loss)
+    if (newWeight <= weightGoal.goalValue) {
+      await ctx.db.patch(weightGoal._id, {
+        status: "completed",
+        updatedAt: Date.now(),
+      });
+    }
+  }
+
+  console.log(`Updated weight for user ${userId}: ${previousWeight}kg → ${newWeight}kg (goal updated: ${goalUpdated})`);
+
+  return { newWeight, previousWeight, goalUpdated };
 }
 
 // Helper: Update goal progress based on activity
@@ -408,6 +483,7 @@ function generateActivityName(activityType: string): string {
     social: "Social Activity",
     hobby: "Hobby Activity",
     leisure: "Leisure Activity",
+    weight_check: "Weight Check",
   };
 
   return typeMap[activityType.toLowerCase()] ||

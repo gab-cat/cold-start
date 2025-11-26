@@ -3,15 +3,15 @@
 @tailwind utilities;
 
 @layer utilities {
-  /* Archivo font family - for headings/titles */
+  /* Bricolage Grotesque font family - for headings/titles */
   .font-archivo {
-    font-family: Archivo_400Regular;
+    font-family: BricolageGrotesque_400Regular;
   }
   .font-archivo-semibold {
-    font-family: Archivo_600SemiBold;
+    font-family: BricolageGrotesque_600SemiBold;
   }
   .font-archivo-bold {
-    font-family: Archivo_700Bold;
+    font-family: BricolageGrotesque_700Bold !important;
   }
 
   /* DM Sans font family - for body text */

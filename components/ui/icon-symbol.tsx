@@ -24,6 +24,7 @@ const MAPPING = {
   'safari.fill': 'explore',
   'list.bullet': 'list',
   'chart.bar.fill': 'bar-chart',
+  'chart.bar': 'bar-chart',
   'person.fill': 'person',
   'calendar.badge.exclamationmark': 'event-busy',
   'clock': 'schedule',
@@ -43,6 +44,10 @@ const MAPPING = {
   'fork.knife': 'restaurant',
   'drop': 'water-drop',
   'brain.head.profile': 'psychology',
+  // Meal time icons
+  'sunrise': 'wb-sunny',
+  'sun.max': 'light-mode',
+  'takeoutbag.and.cup.and.straw': 'fastfood',
   // Leisure activities
   'gamecontroller': 'sports-esports',
   'desktopcomputer': 'computer',
@@ -55,12 +60,31 @@ const MAPPING = {
   // UI icons
   'magnifyingglass': 'search',
   'flame': 'local-fire-department',
+  'flame.fill': 'local-fire-department',
   'map': 'map',
   'bolt': 'flash-on',
   'bolt.fill': 'flash-on',
   'pencil': 'edit',
   'rectangle.portrait.and.arrow.right': 'logout',
   'gear': 'settings',
+  'gearshape.fill': 'settings',
+  'gearshape': 'settings',
+  'questionmark.circle': 'help-outline',
+  'questionmark.circle.fill': 'help',
+  // Profile & Health icons
+  'ruler': 'straighten',
+  'scalemass': 'monitor-weight',
+  'heart.fill': 'favorite',
+  'heart': 'favorite-border',
+  'cross.case.fill': 'medical-services',
+  'cross.case': 'medical-services',
+  'globe': 'language',
+  'textformat': 'translate',
+  'bell.fill': 'notifications',
+  'bell': 'notifications-none',
+  'message.fill': 'message',
+  'message': 'message',
+  'newspaper': 'article',
   // Recommendation icons
   'lightbulb': 'lightbulb',
   'calendar': 'calendar-today',
@@ -74,6 +98,13 @@ const MAPPING = {
   'cart.fill': 'shopping-cart',
   'checkmark.circle': 'check-circle',
   'book.closed': 'auto-stories',
+  // Chat & FAB icons
+  'bubble.left.and.bubble.right.fill': 'forum',
+  'bubble.left.fill': 'chat-bubble',
+  'hand.wave.fill': 'front-hand',
+  'xmark': 'close',
+  'arrow.up': 'arrow-upward',
+  'arrow.up.circle.fill': 'arrow-circle-up',
 } as IconMapping;
 
 /**

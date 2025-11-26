@@ -1,18 +1,18 @@
 export const WiseColors = {
-  primary: '#00B9A8',
-  primaryDark: '#008B82',
-  primaryLight: '#E6FAF8',
-  background: '#FAFBFC',
+  primary: '#2563EB',
+  primaryDark: '#1E40AF',
+  primaryLight: '#DBEAFE',
+  background: '#F8FAFC',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
-  text: '#1A1A2E',
-  textSecondary: '#6B7280',
+  text: '#0F172A',
+  textSecondary: '#64748B',
   success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  accent: '#FF6B6B',
-  border: '#E5E7EB',
-  subtle: '#F3F4F6',
+  warning: '#F97316',
+  error: '#DC2626',
+  accent: '#F97316',
+  border: '#E2E8F0',
+  subtle: '#F1F5F9',
 };
 
 // Colors object for useThemeColor hook compatibility
@@ -75,3 +75,32 @@ export const Shadows = {
     elevation: 8,
   },
 };
+
+// Animation constants for consistent entry animations
+export const AnimationConfig = {
+  // Duration presets (ms)
+  duration: {
+    fast: 250,
+    normal: 400,
+    slow: 600,
+  },
+  // Stagger delay between sequential items (ms)
+  stagger: 80,
+  // Spring physics for natural motion
+  spring: {
+    damping: 18,
+    stiffness: 120,
+    mass: 0.8,
+  },
+  // Fade in vertical offset (pixels)
+  translateY: {
+    subtle: 12,
+    normal: 20,
+    pronounced: 32,
+  },
+  // Scale values for scale-in animations
+  scale: {
+    start: 0.92,
+    end: 1,
+  },
+} as const;

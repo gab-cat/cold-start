@@ -1,8 +1,8 @@
 "use node";
 
+import { GoogleGenAI } from "@google/genai";
 import { v } from "convex/values";
 import { action } from "../_generated/server";
-import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
@@ -22,19 +22,50 @@ export const searchFoodCalories = action({
     foodName: v.string(),
     servingSize: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<FoodCalorieInfo | null> => {
+  handler: async (_, args): Promise<FoodCalorieInfo | null> => {
     try {
       const query = `${args.foodName} calories per serving${args.servingSize ? ` ${args.servingSize}` : ""}`;
 
-      const result = await ai.models.generateContent({
+      // Step 1: Search with Google grounding (no JSON mode - incompatible)
+      const searchResult = await ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: [{
-          parts: [{
-            text: `Search for accurate calorie information for: ${query}. Return the most reliable data from nutrition websites, USDA, or reputable sources. Focus on calories per serving and serving size.`
-          }]
-        }],
+        contents: [
+          {
+            parts: [
+              {
+                text: `Search for accurate calorie information for: ${query}. Find data from nutrition websites, USDA, or reputable sources. Focus on calories per serving and serving size. Provide the food name, calories per serving as a number, serving size, and source.`,
+              },
+            ],
+          },
+        ],
         config: {
           tools: [{ googleSearch: {} }],
+        },
+      });
+
+      const searchText = searchResult.text;
+      if (!searchText) {
+        console.error("Empty response from Google Search API");
+        return null;
+      }
+
+      // Step 2: Parse the search result into structured JSON
+      const parseResult = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            parts: [
+              {
+                text: `Extract calorie information from this text and return as JSON:
+
+${searchText}
+
+Return JSON with: foodName (string), caloriesPerServing (number), servingSize (string), source (string), confidence (number 0-1).`,
+              },
+            ],
+          },
+        ],
+        config: {
           responseMimeType: "application/json",
           responseJsonSchema: {
             type: "object",
@@ -43,24 +74,36 @@ export const searchFoodCalories = action({
               caloriesPerServing: { type: "number" },
               servingSize: { type: "string" },
               source: { type: "string" },
-              confidence: { type: "number", minimum: 0, maximum: 1 }
+              confidence: { type: "number" },
             },
-            required: ["foodName", "caloriesPerServing", "servingSize", "source", "confidence"]
-          }
-        }
+            required: [
+              "foodName",
+              "caloriesPerServing",
+              "servingSize",
+              "source",
+              "confidence",
+            ],
+          },
+        },
       });
 
-      const responseText = result.text;
+      const responseText = parseResult.text;
       if (!responseText) {
-        console.error("Empty response from Google Search API");
+        console.error("Empty response from parsing step");
         return null;
       }
 
       const parsedResult = JSON.parse(responseText);
 
       // Validate the response has the expected structure
-      if (!parsedResult.foodName || typeof parsedResult.caloriesPerServing !== "number") {
-        console.error("Invalid response structure from Google Search API:", parsedResult);
+      if (
+        !parsedResult.foodName ||
+        typeof parsedResult.caloriesPerServing !== "number"
+      ) {
+        console.error(
+          "Invalid response structure from Google Search API:",
+          parsedResult
+        );
         return null;
       }
 

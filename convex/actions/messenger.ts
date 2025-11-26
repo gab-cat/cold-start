@@ -5,6 +5,7 @@ import { api, internal } from "../_generated/api";
 import { action } from "../_generated/server";
 import { runAgentReasoning } from "../ai/agentReasoning";
 import { parseUserIntent } from "../ai/intentParser";
+import { getMealTypeFromTimestamp } from "../utils";
 
 export const processMessage = action({
   args: {
@@ -230,4 +231,154 @@ async function sendMessengerMessage(psid: string, text: string) {
     console.error("Error sending Messenger message:", error);
   }
 }
+
+/**
+ * Process image messages from Messenger
+ * Analyzes food images using Gemini Vision and logs meal activities
+ */
+export const processImageMessage = action({
+  args: {
+    senderPsid: v.string(),
+    imageUrl: v.string(),
+    timestamp: v.number(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Step 1: Fetch user by Messenger PSID
+      const user = await ctx.runQuery(
+        internal.users.getUserByMessengerIdInternal,
+        { messengerPsid: args.senderPsid }
+      );
+
+      if (!user) {
+        // User not linked yet
+        await sendMessengerMessage(
+          args.senderPsid,
+          "Welcome to WellBuddy! To get started, enter the 8-character code from your profile in the app."
+        );
+        return;
+      }
+
+      // Step 2: Analyze the image using Gemini Vision
+      const foodAnalysis = await ctx.runAction(
+        internal.actions.imageAnalysis.analyzeFoodImage,
+        { imageUrl: args.imageUrl }
+      );
+
+      // Step 3: Handle non-food images
+      if (!foodAnalysis.isFood) {
+        await sendMessengerMessage(
+          args.senderPsid,
+          "I couldn't spot any food in that image. Try sending a clearer photo of your meal, or just tell me what you ate."
+        );
+        return;
+      }
+
+      // Step 4: Determine meal type based on timestamp
+      const userTimezone = user.preferences?.preferredTimezone || "UTC";
+      const mealType = getMealTypeFromTimestamp(args.timestamp, userTimezone);
+
+      // Step 5: Get refined calorie info using Google Search (for accuracy)
+      let finalCalories = foodAnalysis.estimatedCalories;
+      try {
+        const calorieInfo = await ctx.runAction(
+          api.actions.googleSearch.searchFoodCalories,
+          { foodName: foodAnalysis.description }
+        );
+
+        if (calorieInfo && calorieInfo.caloriesPerServing > 0) {
+          // Use Google Search result if it has good data
+          finalCalories = calorieInfo.caloriesPerServing;
+          console.log(
+            `Refined calories for "${foodAnalysis.description}": ${finalCalories} (from ${calorieInfo.source})`
+          );
+        }
+      } catch (calorieError) {
+        console.error("Error looking up food calories:", calorieError);
+        // Fall back to Gemini's estimate
+      }
+
+      // Step 6: Generate activity name based on meal type
+      const mealTypeCapitalized =
+        mealType.charAt(0).toUpperCase() + mealType.slice(1);
+
+      // Step 7: Log the meal activity
+      const result = await ctx.runMutation(
+        internal.internalMutations.executeAgentAction,
+        {
+          userId: user._id,
+          actionMutation: "userActivity.log",
+          params: {
+            activityType: "meal",
+            activityName: mealTypeCapitalized,
+            mealType: mealType,
+            mealDescription: foodAnalysis.description,
+            caloriesConsumed: finalCalories,
+            notes: `Logged via photo: ${foodAnalysis.foods.join(", ")}`,
+            loggedAt: args.timestamp,
+            sourceType: "messenger",
+          },
+        }
+      );
+
+      // Step 8: Store conversation for context
+      await ctx.runMutation(internal.messengerConversations.store, {
+        userId: user._id,
+        userMessage: `[Image: Food photo]`,
+        agentResponse: {
+          text: `Logged ${mealTypeCapitalized}: ${foodAnalysis.description}`,
+          type: "confirmation",
+          structuredData: {
+            type: "meal_logged",
+            foodAnalysis,
+            finalCalories,
+            mealType,
+          },
+          confidence: foodAnalysis.confidence,
+        },
+        actionsTaken: [
+          {
+            mutation: "userActivity.log",
+            params: {
+              activityType: "meal",
+              mealType,
+              mealDescription: foodAnalysis.description,
+              caloriesConsumed: finalCalories,
+            },
+            success: true,
+            result,
+          },
+        ],
+      });
+
+      // Step 9: Store embedding for RAG
+      try {
+        await ctx.runAction(internal.actions.embeddings.storeEmbeddingAction, {
+          userId: user._id,
+          contentType: "activity_summary",
+          contentChunk: `Logged ${mealType} meal via photo: ${foodAnalysis.description}. Foods: ${foodAnalysis.foods.join(", ")}. Calories: ${finalCalories}`,
+        });
+      } catch (error) {
+        console.error("Error storing embedding:", error);
+      }
+
+      // Step 10: Send confirmation to user (friendly coach tone, no emojis/formatting)
+      const lowConfidenceTip =
+        foodAnalysis.confidence < 0.7
+          ? " Let me know if I got that wrong."
+          : "";
+
+      await sendMessengerMessage(
+        args.senderPsid,
+        `Got it, logged your ${mealType}: ${foodAnalysis.description} at around ${finalCalories} calories.${lowConfidenceTip} Keep up the good work tracking your meals!`
+      );
+    } catch (error: any) {
+      console.error("Error processing image message:", error);
+      await sendMessengerMessage(
+        args.senderPsid,
+        "I had trouble analyzing that image. Try sending another photo or just tell me what you ate."
+      );
+    }
+  },
+});
 

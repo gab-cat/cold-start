@@ -1,4 +1,5 @@
 import { AIBackground } from "@/components/ui/AIBackground";
+import { AnimatedListItem, AnimatedSection } from "@/components/ui/AnimatedSection";
 import { Card } from "@/components/ui/Card";
 import { Header } from "@/components/ui/Header";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -10,10 +11,10 @@ import { ActivityIndicator, Image, Linking, ScrollView, Text, TextInput, Touchab
 
 const ARTICLE_CATEGORIES = [
   { id: "all", name: "All", icon: "list.bullet", color: WiseColors.primary },
-  { id: "nutrition", name: "Nutrition", icon: "fork.knife", color: "#EF4444" },
-  { id: "workout", name: "Workouts", icon: "figure.run", color: "#10B981" },
+  { id: "nutrition", name: "Nutrition", icon: "fork.knife", color: "#F97316" },
+  { id: "workout", name: "Workouts", icon: "figure.run", color: WiseColors.primary },
   { id: "mental_health", name: "Mental Health", icon: "brain.head.profile", color: "#8B5CF6" },
-  { id: "general", name: "General", icon: "newspaper", color: "#6366F1" },
+  { id: "general", name: "General", icon: "newspaper", color: "#3B82F6" },
 ];
 
 export default function ExploreScreen() {
@@ -62,12 +63,12 @@ export default function ExploreScreen() {
       <AIBackground className="flex-1">
         <Header title="Explore" subtitle="Fitness articles & tips" showAvatar={false} />
         <ScrollView 
-          className="flex-1"
+          className="flex-1 pt-2"
           contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
         >
           {/* Search Bar */}
-          <View className="px-4 mb-6">
+          <AnimatedSection index={0} className="px-4 mb-6">
             <View className="flex-row items-center bg-wise-surface px-4 py-3 rounded-wise-lg shadow-sm">
               <IconSymbol name="magnifyingglass" size={20} color={WiseColors.textSecondary} />
               <TextInput 
@@ -78,10 +79,10 @@ export default function ExploreScreen() {
                 onChangeText={setSearchQuery}
               />
             </View>
-          </View>
+          </AnimatedSection>
 
           {/* Categories */}
-          <View className="mb-6">
+          <AnimatedSection index={1} className="mb-6">
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false} 
@@ -108,10 +109,10 @@ export default function ExploreScreen() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
+          </AnimatedSection>
 
           {/* Articles */}
-          <View className="px-4">
+          <AnimatedSection index={2} className="px-4">
             <Text className="font-archivo-bold text-xl text-wise-text mb-4">
               {selectedCategory === "all" ? "Latest Articles" : getCategoryName(selectedCategory)}
             </Text>
@@ -145,56 +146,57 @@ export default function ExploreScreen() {
 
             {/* Articles List */}
             {articles !== undefined && filteredArticles.length > 0 && (
-              filteredArticles.map((article) => (
-                <TouchableOpacity 
-                  key={article._id} 
-                  activeOpacity={0.9}
-                  onPress={() => handleArticlePress(article.url)}
-                >
-                  <Card className="mb-4 overflow-hidden" padding="none">
-                    {article.urlToImage && (
-                      <Image 
-                        source={{ uri: article.urlToImage }} 
-                        className="w-full h-40"
-                        resizeMode="cover"
-                      />
-                    )}
-                    <View className="p-4">
-                      <View className="flex-row items-center mb-2">
-                        <View 
-                          className="px-2 py-1 rounded-full mr-2"
-                          style={{ backgroundColor: getCategoryColor(article.category) + "20" }}
-                        >
-                          <Text 
-                            className="font-sans-medium text-xs"
-                            style={{ color: getCategoryColor(article.category) }}
+              filteredArticles.map((article, index) => (
+                <AnimatedListItem key={article._id} index={index}>
+                  <TouchableOpacity 
+                    activeOpacity={0.9}
+                    onPress={() => handleArticlePress(article.url)}
+                  >
+                    <Card className="mb-4 overflow-hidden" padding="none">
+                      {article.urlToImage && (
+                        <Image 
+                          source={{ uri: article.urlToImage }} 
+                          className="w-full h-40"
+                          resizeMode="cover"
+                        />
+                      )}
+                      <View className="p-4">
+                        <View className="flex-row items-center mb-2">
+                          <View 
+                            className="px-2 py-1 rounded-full mr-2"
+                            style={{ backgroundColor: getCategoryColor(article.category) + "20" }}
                           >
-                            {getCategoryName(article.category)}
+                            <Text 
+                              className="font-sans-medium text-xs"
+                              style={{ color: getCategoryColor(article.category) }}
+                            >
+                              {getCategoryName(article.category)}
+                            </Text>
+                          </View>
+                          <Text className="font-sans text-xs text-wise-text-secondary">
+                            {getReadTime(article.content)}
                           </Text>
+                          {article.source?.name && (
+                            <Text className="font-sans text-xs text-wise-text-secondary ml-2">
+                              • {article.source.name}
+                            </Text>
+                          )}
                         </View>
-                        <Text className="font-sans text-xs text-wise-text-secondary">
-                          {getReadTime(article.content)}
+                        <Text className="font-archivo-bold text-lg text-wise-text mb-2">
+                          {article.title}
                         </Text>
-                        {article.source?.name && (
-                          <Text className="font-sans text-xs text-wise-text-secondary ml-2">
-                            • {article.source.name}
+                        {article.description && (
+                          <Text className="font-sans text-sm text-wise-text-secondary leading-5" numberOfLines={3}>
+                            {article.description}
                           </Text>
                         )}
                       </View>
-                      <Text className="font-archivo-bold text-lg text-wise-text mb-2">
-                        {article.title}
-                      </Text>
-                      {article.description && (
-                        <Text className="font-sans text-sm text-wise-text-secondary leading-5" numberOfLines={3}>
-                          {article.description}
-                        </Text>
-                      )}
-                    </View>
-                  </Card>
-                </TouchableOpacity>
+                    </Card>
+                  </TouchableOpacity>
+                </AnimatedListItem>
               ))
             )}
-          </View>
+          </AnimatedSection>
 
           <View className="h-10" />
         </ScrollView>

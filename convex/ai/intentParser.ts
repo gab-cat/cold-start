@@ -10,13 +10,13 @@ const ai = new GoogleGenAI({
 
 // Zod schema for structured intent parsing
 const ParsedIntentSchema = z.object({
-  intent: z.enum(["log_activity", "ask_advice", "check_status", "set_goal", "other"]),
+  intent: z.enum(["log_activity", "ask_advice", "check_status", "set_goal", "update_weight", "other"]),
   activityType: z.union([
     z.enum([
       // Exercise activities
       "workout", "walk", "run", "yoga", "cycle", "swim", "gym", "meditation", "stretch",
       // Wellness activities
-      "sleep", "hydration", "meal",
+      "sleep", "hydration", "meal", "weight_check",
       // Leisure activities
       "gaming", "computer", "reading", "tv", "music", "social", "hobby", "leisure",
       // Errands and tasks
@@ -26,7 +26,7 @@ const ParsedIntentSchema = z.object({
   ]),
   value: z.union([z.number(), z.null()]),
   unit: z.union([
-    z.enum(["km", "minutes", "hours", "ml", "meals", "pages", "steps"]),
+    z.enum(["km", "minutes", "hours", "ml", "meals", "pages", "steps", "kg", "lbs"]),
     z.null(),
   ]),
   confidence: z.number().min(0).max(1),

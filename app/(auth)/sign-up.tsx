@@ -1,4 +1,5 @@
 import { AIBackground } from '@/components/ui/AIBackground'
+import { AnimatedIcon, AnimatedSection } from '@/components/ui/AnimatedSection'
 import { Button } from '@/components/ui/Button'
 import { useWarmUpBrowser } from '@/hooks/useWarmUpBrowser'
 import { useOAuth } from '@clerk/clerk-expo'
@@ -33,23 +34,28 @@ export default function SignUpScreen() {
   return (
     <AIBackground className="flex-1">
       <View className="flex-1 justify-center p-6">
-        <View className="mb-8 items-center">
+        <AnimatedSection index={0} className="mb-8 items-center">
+          <AnimatedIcon delay={100}>
+            <View className="w-16 h-16 bg-wise-accent/15 rounded-2xl items-center justify-center mb-6">
+              <Text className="text-4xl">🚀</Text>
+            </View>
+          </AnimatedIcon>
           <Text className="font-archivo-bold text-[32px] text-wise-text mb-1 text-center">
             Create Account
           </Text>
           <Text className="font-sans text-base text-wise-text-secondary text-center">
-            Start your wellness journey today
+            Start your <Text className="text-wise-accent font-sans-medium">wellness journey</Text> today
           </Text>
-        </View>
+        </AnimatedSection>
 
-        <View className="w-full mt-8">
+        <AnimatedSection index={1} className="w-full mt-8">
           <Button 
             title="Continue with Google" 
             onPress={onGoogleSignUp} 
             icon={<Ionicons name="logo-google" size={20} color="white" style={{ marginRight: 8 }} />}
             className="w-full"
           />
-        </View>
+        </AnimatedSection>
       </View>
     </AIBackground>
   )

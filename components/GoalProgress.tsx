@@ -29,7 +29,7 @@ export function GoalProgress({
 
   useEffect(() => {
     progressWidth.value = withDelay(200, withTiming(percentage, { duration: 1000 }));
-  }, [percentage]);
+  }, [percentage, progressWidth]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

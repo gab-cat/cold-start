@@ -1,6 +1,6 @@
-import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { internalQuery, mutation, query } from "./_generated/server";
 
 // Log an activity
 export const logActivity = mutation({
@@ -18,6 +18,9 @@ export const logActivity = mutation({
     sleepQuality: v.optional(v.string()),
     mealType: v.optional(v.string()),
     mealDescription: v.optional(v.string()),
+    weightKg: v.optional(v.number()),
+    weightChange: v.optional(v.number()),
+    previousWeightKg: v.optional(v.number()),
     timeStarted: v.optional(v.number()),
     timeEnded: v.optional(v.number()),
     mood: v.optional(v.string()),
@@ -50,6 +53,9 @@ export const logActivity = mutation({
       sleepQuality: args.sleepQuality,
       mealType: args.mealType,
       mealDescription: args.mealDescription,
+      weightKg: args.weightKg,
+      weightChange: args.weightChange,
+      previousWeightKg: args.previousWeightKg,
       timeStarted: args.timeStarted,
       timeEnded: args.timeEnded,
       mood: args.mood,

@@ -111,16 +111,24 @@ ${contextSummary}
 
 AVAILABLE FUNCTIONS (use these exact mutation names):
 - "userActivity.log": Log a new activity
-  REQUIRED params: activityType (e.g., "run", "walk", "sleep", "meal", "shopping", "study", "errand", "task"), activityName (e.g., "Morning Run", "Evening Walk", "Shopping Trip", "Study Session")
-  OPTIONAL params: durationMinutes?, distanceKm?, caloriesBurned?, caloriesConsumed?, intensity?, hydrationMl?, sleepHours?, sleepQuality?, mealType?, mealDescription?, timeStarted?, timeEnded?, mood?, notes?, loggedAt?
+  REQUIRED params: activityType (e.g., "run", "walk", "sleep", "meal", "shopping", "study", "errand", "task", "weight_check"), activityName (e.g., "Morning Run", "Evening Walk", "Shopping Trip", "Study Session", "Weight Check")
+  OPTIONAL params: durationMinutes?, distanceKm?, caloriesBurned?, caloriesConsumed?, intensity?, hydrationMl?, sleepHours?, sleepQuality?, mealType?, mealDescription?, timeStarted?, timeEnded?, mood?, notes?, loggedAt?, weightKg?, weightChange?
   IMPORTANT: activityName is REQUIRED and must be a descriptive human-readable name for the activity.
   
   ACTIVITY TYPE MAPPING:
   - Shopping/errands: Use activityType "shopping" or "errand" for activities like "went shopping", "grocery shopping", "running errands"
   - Study/learning: Use activityType "study" or "task" for activities like "studied", "studying", "learning", "homework"
   - Exercise: "run", "walk", "workout", "yoga", "cycle", "swim", "gym", "meditation", "stretch"
-  - Wellness: "sleep", "hydration", "meal"
+  - Wellness: "sleep", "hydration", "meal", "weight_check"
   - Leisure: "gaming", "computer", "reading", "tv", "music", "social", "hobby", "leisure"
+  
+  WEIGHT CHECK ACTIVITY:
+  - Use activityType "weight_check" for weight measurements, weight loss/gain reporting
+  - Examples: "checked my weight", "lost 2kg", "gained 1kg", "weighed myself at 75kg", "I'm now 70kg"
+  - Include weightKg (current weight) and/or weightChange (positive for gain, negative for loss)
+  - For relative changes like "lost 2kg", set weightChange: -2. The system will calculate new weight from profile.
+  - For absolute weights like "I'm 75kg now", set weightKg: 75
+  - Always ALSO call "userProfile.updateWeight" to update the user's profile weight
   
   METRICS EXTRACTION:
   - Duration: Extract duration from phrases like "for 30 mins", "for 1 hour", "for 2 hours" → durationMinutes
@@ -180,6 +188,10 @@ AVAILABLE FUNCTIONS (use these exact mutation names):
 - "userStreaks.update": Update streak count (params: streakType)
 - "userGoals.adjust": Adjust goal values (params: goalId, newValue)
 - "userProfile.updateContext": Update user context (no params needed)
+- "userProfile.updateWeight": Update user's weight in their profile (params: weightKg?, weightChange?)
+  - Use weightKg for absolute weight (e.g., "I'm 75kg now")
+  - Use weightChange for relative weight changes (negative for loss, positive for gain)
+  - This also updates any active weight_loss goals automatically
 
 For MEAL activities, try to extract calorie information from the food description. Use Google Search to find accurate calorie data when possible.
 

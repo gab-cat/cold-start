@@ -10,6 +10,52 @@ import {
 } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
+/**
+ * Determines meal type based on timestamp and optional timezone
+ * 
+ * Time ranges:
+ * - Breakfast: 5:00 AM - 10:59 AM
+ * - Lunch: 11:00 AM - 1:59 PM
+ * - Snack: 2:00 PM - 4:59 PM
+ * - Dinner: 5:00 PM - 8:59 PM
+ * - Late night snack: 9:00 PM - 4:59 AM
+ * 
+ * @param timestamp - Unix timestamp in milliseconds
+ * @param timezone - Optional timezone (e.g., "Asia/Manila", "America/New_York")
+ * @returns Meal type: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+ */
+export function getMealTypeFromTimestamp(
+  timestamp: number,
+  timezone?: string
+): "breakfast" | "lunch" | "dinner" | "snack" {
+  const date = new Date(timestamp);
+  const zonedDate = timezone ? toZonedTime(date, timezone) : date;
+  const hour = zonedDate.getHours();
+
+  // Breakfast: 5 AM - 10:59 AM
+  if (hour >= 5 && hour < 11) {
+    return "breakfast";
+  }
+
+  // Lunch: 11 AM - 1:59 PM
+  if (hour >= 11 && hour < 14) {
+    return "lunch";
+  }
+
+  // Afternoon snack: 2 PM - 4:59 PM
+  if (hour >= 14 && hour < 17) {
+    return "snack";
+  }
+
+  // Dinner: 5 PM - 8:59 PM
+  if (hour >= 17 && hour < 21) {
+    return "dinner";
+  }
+
+  // Late night snack: 9 PM - 4:59 AM
+  return "snack";
+}
+
 export function generateUniqueCode(length: number = 8): string {
   const array = new Uint8Array(Math.ceil(length / 2));
   crypto.getRandomValues(array);

@@ -217,6 +217,14 @@ export const getUserByMessengerIdInternal = internalQuery({
   },
 });
 
+// Internal query: Get user by ID (for in-app chat)
+export const getUserByIdInternal = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});
+
 // Internal query: Get user by unique code
 export const getUserByUniqueCode = internalQuery({
   args: { uniqueCode: v.string() },

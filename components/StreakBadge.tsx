@@ -30,7 +30,7 @@ export function StreakBadge({
       -1,
       true
     );
-  }, []);
+  }, [scale]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

@@ -1,4 +1,5 @@
 import { AIBackground } from "@/components/ui/AIBackground";
+import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Header } from "@/components/ui/Header";
@@ -213,131 +214,195 @@ export default function ProfileScreen() {
       <AIBackground className="flex-1">
         <Header 
           title="Profile" 
-          subtitle="Manage your account"
-          showAvatar={false} 
+          subtitle="Your account" 
+          showAvatar={false}
           rightAction={
-            !isEditing && (
+            !isEditing ? (
               <TouchableOpacity 
                 onPress={handleStartEdit}
-                className="w-min h-10 px-4 border-wise-primary border rounded-full flex flex-row bg-wise-surface items-center justify-center shadow-sm"
+                className="w-10 h-10 bg-wise-primary/10 rounded-full items-center justify-center"
               >
-                <IconSymbol name="pencil" size={15} color={WiseColors.primary} />
-                <Text className="text-sm text-wise-primary ml-2">Edit Profile</Text>
+                <IconSymbol name="pencil" size={18} color={WiseColors.primary} />
               </TouchableOpacity>
-            )
+            ) : null
           }
         />
-        
         <ScrollView 
-          className="flex-1"
-          contentContainerStyle={{ paddingBottom: 32 }}
+          className="flex-1 pt-2"
+          contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Profile Header */}
-          <View className="items-center mb-8 px-4">
-            <View className="mb-4 shadow-md">
-              {user?.imageUrl ? (
-                <Image source={{ uri: user.imageUrl }} className="w-[100px] h-[100px] rounded-full border-4 border-wise-surface" />
-              ) : (
-                <View className="w-[100px] h-[100px] rounded-full bg-wise-primary-light justify-center items-center border-4 border-wise-surface">
-                  <Text className="font-archivo-bold text-5xl text-wise-primary">
-                    {currentUser.displayName?.charAt(0) || "U"}
+          {/* Profile Card */}
+          <AnimatedSection index={0} className="px-4 mb-6">
+            <Card padding="lg">
+              <View className="items-center">
+                {/* Avatar */}
+                <View className="relative mb-4">
+                  {user?.imageUrl ? (
+                    <Image 
+                      source={{ uri: user.imageUrl }} 
+                      className="w-24 h-24 rounded-full border-4 border-wise-primary/20" 
+                    />
+                  ) : (
+                    <View className="w-24 h-24 rounded-full bg-wise-primary/10 justify-center items-center border-4 border-wise-primary/20">
+                      <Text className="font-archivo-bold text-3xl text-wise-primary">
+                        {currentUser.displayName?.charAt(0) || "U"}
+                      </Text>
+                    </View>
+                  )}
+                  {/* Online indicator */}
+                  <View className="absolute bottom-1 right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white" />
+                </View>
+                
+                <Text className="font-archivo-bold text-2xl text-wise-text">
+                  {currentUser.displayName || user?.firstName || "User"}
+                </Text>
+                <Text className="font-sans text-sm text-wise-text-secondary mt-1">
+                  {currentUser.email}
+                </Text>
+              </View>
+
+              {/* Quick Stats Row */}
+              <View className="flex-row mt-6 pt-6 border-t border-wise-border">
+                <View className="flex-1 items-center">
+                  <View className="w-10 h-10 bg-wise-primary/10 rounded-lg items-center justify-center mb-2">
+                    <IconSymbol name="ruler" size={18} color={WiseColors.primary} />
+                  </View>
+                  <Text className="font-archivo-bold text-lg text-wise-text">
+                    {healthProfile.height || "—"}
                   </Text>
+                  <Text className="font-sans text-xs text-wise-text-secondary">cm</Text>
+                </View>
+                <View className="flex-1 items-center border-x border-wise-border">
+                  <View className="w-10 h-10 bg-wise-accent/10 rounded-lg items-center justify-center mb-2">
+                    <IconSymbol name="scalemass" size={18} color={WiseColors.accent} />
+                  </View>
+                  <Text className="font-archivo-bold text-lg text-wise-text">
+                    {healthProfile.weight || "—"}
+                  </Text>
+                  <Text className="font-sans text-xs text-wise-text-secondary">kg</Text>
+                </View>
+                <View className="flex-1 items-center">
+                  <View className="w-10 h-10 bg-purple-100 rounded-lg items-center justify-center mb-2">
+                    <IconSymbol name="figure.run" size={18} color="#8B5CF6" />
+                  </View>
+                  <Text className="font-archivo-bold text-lg text-wise-text">
+                    {capitalize(healthProfile.fitnessLevel as string) || "—"}
+                  </Text>
+                  <Text className="font-sans text-xs text-wise-text-secondary">Level</Text>
+                </View>
+              </View>
+            </Card>
+          </AnimatedSection>
+
+          {/* Messenger Connection */}
+          <AnimatedSection index={1} className="px-4 mb-6">
+            <View className="flex-row items-center mb-3">
+              <View className="w-8 h-8 bg-[#0084FF]/10 rounded-lg items-center justify-center mr-2">
+                <IconSymbol name="message.fill" size={16} color="#0084FF" />
+              </View>
+              <Text className="font-archivo-bold text-xl text-wise-text">
+                Messenger Bot
+              </Text>
+              {currentUser.messengerPsid ? (
+                <View className="ml-2 bg-green-100 px-2 py-0.5 rounded-full">
+                  <Text className="font-sans-bold text-[10px] text-green-600">LINKED</Text>
+                </View>
+              ) : (
+                <View className="ml-2 bg-wise-accent/15 px-2 py-0.5 rounded-full">
+                  <Text className="font-sans-bold text-[10px] text-wise-accent">PENDING</Text>
                 </View>
               )}
             </View>
-            <Text className="font-archivo-bold text-4xl tracking-tighter text-wise-text mb-1">
-              {currentUser.displayName || user?.firstName || "User"}
-            </Text>
-            <Text className="font-sans text-base text-wise-text-secondary">
-              {currentUser.email}
-            </Text>
-          </View>
-
-          {/* Messenger Connection Code */}
-          <View className="px-4 mb-8">
-            <Text className="font-archivo-bold text-lg text-wise-text mb-4">
-              Messenger Connection
-            </Text>
-            <Card padding="lg">
-              <Text className="font-sans text-sm text-wise-text-secondary mb-4">
-                Send this code to the WellBuddy Messenger bot to link your account:
+            
+            <Card padding="md">
+              <Text className="font-sans text-sm text-wise-text-secondary mb-3">
+                {currentUser.messengerPsid 
+                  ? "Your Messenger is connected. Chat with WellBuddy anytime!"
+                  : "Send this code to WellBuddy bot to connect:"}
               </Text>
-              <TouchableOpacity 
-                className="flex-row items-center justify-between bg-wise-subtle p-4 rounded-wise-md mb-4"
-                onPress={copyToClipboard}
-              >
-                <Text className="font-archivo-bold text-xl text-wise-text tracking-widest">
-                  {currentUser.uniqueCode || "Generating..."}
-                </Text>
-                <View className="bg-wise-surface px-2 py-1 rounded-wise-sm flex flex-row items-center gap-1">
-                  <IconSymbol name="doc.on.doc" size={20} color={WiseColors.primary} />
-                </View>
-              </TouchableOpacity>
-              <View className="flex-row items-center justify-between">
-                <Text className="font-sans-medium text-base text-wise-text">Status:</Text>
-                {currentUser.messengerPsid ? (
-                  <View className="bg-wise-success/20 px-2 py-1 rounded-full">
-                    <Text className="font-sans-bold text-xs text-wise-success">Connected</Text>
-                  </View>
-                ) : (
-                  <Text className="font-sans-medium text-sm text-wise-text-secondary">Not Connected</Text>
-                )}
-              </View>
               
-              {/* Disconnect / Generate New Code Button */}
-              <View className="mt-4 pt-4 border-t border-wise-border">
-                <TouchableOpacity
-                  onPress={handleDisconnectMessenger}
-                  disabled={isDisconnecting}
-                  className={`flex-row items-center justify-center py-3 rounded-wise-md ${currentUser.messengerPsid ? 'bg-red-50' : 'bg-wise-subtle'}`}
+              {!currentUser.messengerPsid && (
+                <TouchableOpacity 
+                  className="flex-row items-center justify-between bg-wise-subtle p-4 rounded-xl mb-3"
+                  onPress={copyToClipboard}
+                  activeOpacity={0.7}
                 >
-                  {isDisconnecting ? (
-                    <ActivityIndicator size="small" color={currentUser.messengerPsid ? "#EF4444" : WiseColors.primary} />
-                  ) : (
-                    <>
-                      <IconSymbol 
-                        name={currentUser.messengerPsid ? "xmark.circle" : "arrow.clockwise"} 
-                        size={18} 
-                        color={currentUser.messengerPsid ? "#EF4444" : WiseColors.primary} 
-                      />
-                      <Text className={`ml-2 font-sans-medium text-sm ${currentUser.messengerPsid ? 'text-red-500' : 'text-wise-primary'}`}>
-                        {currentUser.messengerPsid ? "Disconnect & Generate New Code" : "Generate New Code"}
-                      </Text>
-                    </>
-                  )}
+                  <Text className="font-archivo-bold text-2xl text-wise-text tracking-[0.2em]">
+                    {currentUser.uniqueCode || "..."}
+                  </Text>
+                  <View className="bg-wise-primary/10 p-2 rounded-lg">
+                    <IconSymbol name="doc.on.doc" size={18} color={WiseColors.primary} />
+                  </View>
                 </TouchableOpacity>
-              </View>
+              )}
+              
+              <TouchableOpacity
+                onPress={handleDisconnectMessenger}
+                disabled={isDisconnecting}
+                className={`flex-row items-center justify-center py-3 rounded-xl ${
+                  currentUser.messengerPsid ? 'bg-red-50' : 'bg-wise-primary/5'
+                }`}
+              >
+                {isDisconnecting ? (
+                  <ActivityIndicator size="small" color={currentUser.messengerPsid ? "#EF4444" : WiseColors.primary} />
+                ) : (
+                  <>
+                    <IconSymbol 
+                      name={currentUser.messengerPsid ? "xmark.circle" : "arrow.clockwise"} 
+                      size={16} 
+                      color={currentUser.messengerPsid ? "#EF4444" : WiseColors.primary} 
+                    />
+                    <Text className={`ml-2 font-sans-medium text-sm ${
+                      currentUser.messengerPsid ? 'text-red-500' : 'text-wise-primary'
+                    }`}>
+                      {currentUser.messengerPsid ? "Disconnect Messenger" : "Regenerate Code"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </Card>
-          </View>
+          </AnimatedSection>
 
-          {/* Health Profile */}
-          <View className="px-4 mb-8">
-            <Text className="font-archivo-bold text-lg text-wise-text mb-4">
-              Health Profile
-            </Text>
+          {/* Health Profile Section */}
+          <AnimatedSection index={2} className="px-4 mb-6">
+            <View className="flex-row items-center mb-3">
+              <View className="w-8 h-8 bg-green-100 rounded-lg items-center justify-center mr-2">
+                <IconSymbol name="heart.fill" size={16} color="#10B981" />
+              </View>
+              <Text className="font-archivo-bold text-xl text-wise-text">
+                Health Profile
+              </Text>
+            </View>
+            
             <Card padding="md">
               {isEditing ? (
                 <View className="space-y-4">
-                  <TextInput
-                    label="Age"
-                    value={formData.age}
-                    onChangeText={(value) => handleFormChange('age', value)}
-                    placeholder="Enter your age"
-                    keyboardType="numeric"
-                  />
-                  <Select
-                    label="Gender"
-                    value={formData.gender}
-                    onValueChange={(value) => handleFormChange('gender', value)}
-                    options={[
-                      { value: 'male', label: 'Male' },
-                      { value: 'female', label: 'Female' },
-                      { value: 'other', label: 'Other' },
-                      { value: 'prefer_not_to_say', label: 'Prefer not to say' },
-                    ]}
-                    placeholder="Select gender"
-                  />
+                  <View className="flex-row gap-3">
+                    <View className="flex-1">
+                      <TextInput
+                        label="Age"
+                        value={formData.age}
+                        onChangeText={(value) => handleFormChange('age', value)}
+                        placeholder="25"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Select
+                        label="Gender"
+                        value={formData.gender}
+                        onValueChange={(value) => handleFormChange('gender', value)}
+                        options={[
+                          { value: 'male', label: 'Male' },
+                          { value: 'female', label: 'Female' },
+                          { value: 'other', label: 'Other' },
+                          { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+                        ]}
+                        placeholder="Select"
+                      />
+                    </View>
+                  </View>
                   <Select
                     label="Fitness Level"
                     value={formData.fitnessLevel}
@@ -349,7 +414,7 @@ export default function ProfileScreen() {
                     ]}
                     placeholder="Select fitness level"
                   />
-                  <View className="flex-row gap-4">
+                  <View className="flex-row gap-3">
                     <View className="flex-1">
                       <TextInput
                         label="Height (cm)"
@@ -370,83 +435,69 @@ export default function ProfileScreen() {
                     </View>
                   </View>
                   <MultiSelect
-                    label="Underlying Conditions"
+                    label="Health Conditions"
                     value={formData.underlyingConditions}
                     onValueChange={(value) => handleFormChange('underlyingConditions', value)}
                     options={underlyingConditionsOptions}
-                    placeholder="Select any health conditions..."
+                    placeholder="Select any conditions..."
                   />
                 </View>
               ) : (
-                <View>
-                  <View className="flex-row justify-between items-center py-2">
-                    <Text className="font-sans-medium text-base text-wise-text">Age</Text>
-                    <Text className="font-sans text-base text-wise-text-secondary">
-                      {healthProfile.age || "Not set"}
-                    </Text>
+                <View className="space-y-1">
+                  {/* Info Rows with Icons */}
+                  <View className="flex-row items-center py-3 border-b border-wise-border">
+                    <View className="w-9 h-9 bg-wise-subtle rounded-lg items-center justify-center mr-3">
+                      <IconSymbol name="calendar" size={16} color={WiseColors.textSecondary} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-sans text-xs text-wise-text-secondary">Age</Text>
+                      <Text className="font-sans-medium text-base text-wise-text">
+                        {healthProfile.age ? `${healthProfile.age} years` : "Not set"}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="h-px bg-wise-border my-2" />
-                  <View className="flex-row justify-between items-center py-2">
-                    <Text className="font-sans-medium text-base text-wise-text">Gender</Text>
-                    <Text className="font-sans text-base text-wise-text-secondary">
-                      {capitalize(healthProfile.gender as string) || "Not set"}
-                    </Text>
+                  
+                  <View className="flex-row items-center py-3 border-b border-wise-border">
+                    <View className="w-9 h-9 bg-wise-subtle rounded-lg items-center justify-center mr-3">
+                      <IconSymbol name="person.fill" size={16} color={WiseColors.textSecondary} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-sans text-xs text-wise-text-secondary">Gender</Text>
+                      <Text className="font-sans-medium text-base text-wise-text">
+                        {capitalize(healthProfile.gender as string) || "Not set"}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="h-px bg-wise-border my-2" />
-                  <View className="flex-row justify-between items-center py-2">
-                    <Text className="font-sans-medium text-base text-wise-text">Fitness Level</Text>
-                    <Text className="font-sans text-base text-wise-text-secondary">
-                      {capitalize(healthProfile.fitnessLevel as string) || "Not set"}
-                    </Text>
-                  </View>
-                  <View className="h-px bg-wise-border my-2" />
-                  <View className="flex-row justify-between items-center py-2">
-                    <Text className="font-sans-medium text-base text-wise-text">Height</Text>
-                    <Text className="font-sans text-base text-wise-text-secondary">
-                      {healthProfile.height ? `${healthProfile.height} cm` : "Not set"}
-                    </Text>
-                  </View>
-                  <View className="h-px bg-wise-border my-2" />
-                  <View className="flex-row justify-between items-center py-2">
-                    <Text className="font-sans-medium text-base text-wise-text">Weight</Text>
-                    <Text className="font-sans text-base text-wise-text-secondary">
-                      {healthProfile.weight ? `${healthProfile.weight} kg` : "Not set"}
-                    </Text>
-                  </View>
-                  {(healthProfile.underlyingConditions || healthProfile.goals?.length) && (
-                    <>
-                      <View className="h-px bg-wise-border my-2" />
-                      <View className="py-2">
-                        <Text className="font-sans-medium text-base text-wise-text mb-1">
-                          Underlying Conditions
-                        </Text>
-                        <Text className="font-sans text-base text-wise-text-secondary">
-                          {healthProfile.underlyingConditions || "None specified"}
+
+                  {healthProfile.underlyingConditions && (
+                    <View className="flex-row items-start py-3">
+                      <View className="w-9 h-9 bg-wise-subtle rounded-lg items-center justify-center mr-3">
+                        <IconSymbol name="cross.case.fill" size={16} color={WiseColors.textSecondary} />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="font-sans text-xs text-wise-text-secondary">Conditions</Text>
+                        <Text className="font-sans-medium text-base text-wise-text">
+                          {healthProfile.underlyingConditions}
                         </Text>
                       </View>
-                    </>
-                  )}
-                  {healthProfile.goals && healthProfile.goals.length > 0 && (
-                    <>
-                      <View className="h-px bg-wise-border my-2" />
-                      <View className="py-2">
-                        <Text className="font-sans-medium text-base text-wise-text mb-1">Goals</Text>
-                        <Text className="font-sans text-base text-wise-text-secondary">
-                          {healthProfile.goals.join(", ")}
-                        </Text>
-                      </View>
-                    </>
+                    </View>
                   )}
                 </View>
               )}
             </Card>
-          </View>
+          </AnimatedSection>
 
-          {/* Preferences */}
-          <View className="px-4 mb-8">
-            <Text className="font-archivo-bold text-lg text-wise-text mb-4">
-              Preferences
-            </Text>
+          {/* Preferences Section */}
+          <AnimatedSection index={3} className="px-4 mb-6">
+            <View className="flex-row items-center mb-3">
+              <View className="w-8 h-8 bg-wise-primary/10 rounded-lg items-center justify-center mr-2">
+                <IconSymbol name="gearshape.fill" size={16} color={WiseColors.primary} />
+              </View>
+              <Text className="font-archivo-bold text-xl text-wise-text">
+                Preferences
+              </Text>
+            </View>
+            
             <Card padding="md">
               {isEditing ? (
                 <View className="space-y-4">
@@ -454,7 +505,7 @@ export default function ProfileScreen() {
                     label="Timezone"
                     value={formData.timezone}
                     onChangeText={(value) => handleFormChange('timezone', value)}
-                    placeholder="e.g., America/New_York"
+                    placeholder="e.g., Asia/Manila"
                   />
                   <Select
                     label="Language"
@@ -467,7 +518,7 @@ export default function ProfileScreen() {
                     placeholder="Select language"
                   />
                   <MultiSelect
-                    label="Notification Types"
+                    label="Notifications"
                     value={formData.notificationTypes}
                     onValueChange={(value) => handleFormChange('notificationTypes', value)}
                     options={[
@@ -478,77 +529,89 @@ export default function ProfileScreen() {
                   />
                 </View>
               ) : (
-                <View>
-                  <View className="flex-row justify-between items-center py-2">
-                    <Text className="font-sans-medium text-base text-wise-text">Timezone</Text>
-                    <Text className="font-sans text-base text-wise-text-secondary">
-                      {preferences.preferredTimezone || "Not set"}
-                    </Text>
+                <View className="space-y-1">
+                  <View className="flex-row items-center py-3 border-b border-wise-border">
+                    <View className="w-9 h-9 bg-wise-subtle rounded-lg items-center justify-center mr-3">
+                      <IconSymbol name="globe" size={16} color={WiseColors.textSecondary} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-sans text-xs text-wise-text-secondary">Timezone</Text>
+                      <Text className="font-sans-medium text-base text-wise-text">
+                        {preferences.preferredTimezone || "Not set"}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="h-px bg-wise-border my-2" />
-                  <View className="flex-row justify-between items-center py-2">
-                    <Text className="font-sans-medium text-base text-wise-text">Language</Text>
-                    <Text className="font-sans text-base text-wise-text-secondary">
-                      {preferences.language === 'en' ? 'English' :
-                        preferences.language === 'tl' ? 'Tagalog' :
-                          "Not set"}
-                    </Text>
+                  
+                  <View className="flex-row items-center py-3 border-b border-wise-border">
+                    <View className="w-9 h-9 bg-wise-subtle rounded-lg items-center justify-center mr-3">
+                      <IconSymbol name="textformat" size={16} color={WiseColors.textSecondary} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-sans text-xs text-wise-text-secondary">Language</Text>
+                      <Text className="font-sans-medium text-base text-wise-text">
+                        {preferences.language === 'en' ? 'English' :
+                          preferences.language === 'tl' ? 'Tagalog' : "Not set"}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="h-px bg-wise-border my-2" />
-                  <View className="py-2">
-                    <Text className="font-sans-medium text-base text-wise-text mb-1">
-                      Notifications
-                    </Text>
-                    <Text className="font-sans text-base text-wise-text-secondary">
-                      {preferences.notificationTypes && preferences.notificationTypes.length > 0
-                        ? preferences.notificationTypes.map(type =>
-                          type === 'push' ? 'Push Notifications' :
-                            type === 'messenger' ? 'Messenger' : type
-                        ).join(', ')
-                        : "Not set"}
-                    </Text>
+                  
+                  <View className="flex-row items-center py-3">
+                    <View className="w-9 h-9 bg-wise-subtle rounded-lg items-center justify-center mr-3">
+                      <IconSymbol name="bell.fill" size={16} color={WiseColors.textSecondary} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-sans text-xs text-wise-text-secondary">Notifications</Text>
+                      <Text className="font-sans-medium text-base text-wise-text">
+                        {preferences.notificationTypes && preferences.notificationTypes.length > 0
+                          ? preferences.notificationTypes.map(type =>
+                            type === 'push' ? 'Push' : type === 'messenger' ? 'Messenger' : type
+                          ).join(' & ')
+                          : "Not set"}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               )}
             </Card>
-          </View>
+          </AnimatedSection>
 
           {/* Edit Mode Actions */}
           {isEditing && (
-            <View className="px-4 mb-8">
-              <View className="flex-row space-x-4">
-                <View className="flex-1 mr-1">
-                  <Button
-                    title="Discard Changes"
-                    onPress={handleCancelEdit}
-                    variant="outline"
-                    disabled={isSaving}
-                  />
-                </View>
-                <View className="flex-1 ml-1">
-                  <Button
-                    title="Save Changes"
-                    onPress={handleSaveProfile}
-                    loading={isSaving}
-                    disabled={isSaving}
-                  />
-                </View>
+            <AnimatedSection index={4} className="px-4 mb-6">
+              <View className="flex-row gap-3">
+                <Button
+                  title="Cancel"
+                  onPress={handleCancelEdit}
+                  variant="outline"
+                  disabled={isSaving}
+                  className="flex-1"
+                />
+                <Button
+                  title="Save Changes"
+                  onPress={handleSaveProfile}
+                  loading={isSaving}
+                  disabled={isSaving}
+                  className="flex-1"
+                />
               </View>
-            </View>
+            </AnimatedSection>
           )}
 
           {/* Sign Out */}
-          <View className="px-4 items-center mb-8">
-            <Button 
-              title="Sign Out" 
-              onPress={handleSignOut} 
-              variant="outline"
-              className="w-full mb-6 bg-gray-50"
-              icon={<IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color={WiseColors.primary} />}
-            />
-            <Text className="font-sans text-xs text-wise-text-secondary">Version 1.0.0</Text>
-          </View>
-          
+          <AnimatedSection index={5} className="px-4 mb-8">
+            <TouchableOpacity 
+              onPress={handleSignOut}
+              className="flex-row items-center justify-center py-4 bg-red-50 rounded-xl"
+            >
+              <IconSymbol name="rectangle.portrait.and.arrow.right" size={18} color="#EF4444" />
+              <Text className="ml-2 font-sans-medium text-base text-red-500">Sign Out</Text>
+            </TouchableOpacity>
+            
+            <Text className="font-sans text-xs text-wise-text-secondary text-center mt-4">
+              WellBuddy v1.0.0
+            </Text>
+          </AnimatedSection>
+
           <View className="h-10" />
         </ScrollView>
       </AIBackground>

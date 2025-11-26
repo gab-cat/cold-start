@@ -3,6 +3,7 @@ import { RecommendationCard } from "@/components/RecommendationCard";
 import { StatCard } from "@/components/StatCard";
 import { StreakBadge } from "@/components/StreakBadge";
 import { AIBackground } from "@/components/ui/AIBackground";
+import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Header } from "@/components/ui/Header";
@@ -13,6 +14,7 @@ import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Keyboard, ScrollView, Text, TouchableWithoutFeedback, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 // BMI calculation helper
 const calculateBMI = (weightKg: number, heightCm: number): number => {
@@ -196,12 +198,12 @@ export default function DashboardScreen() {
       <AIBackground className="flex-1">
         <Header />
         <ScrollView 
-          className="flex-1"
-          contentContainerStyle={{ paddingBottom: 32 }}
+          className="flex-1 pt-2"
+          contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
         >
           {/* Featured Stat - Steps */}
-          <View className="px-4 -mb-2">
+          <AnimatedSection index={0} className="px-4 -mb-2">
             <StatCard
               label="Daily Steps"
               value={todayStats.steps}
@@ -209,10 +211,10 @@ export default function DashboardScreen() {
               unit="steps"
               color={WiseColors.primary}
             />
-          </View>
+          </AnimatedSection>
 
           {/* Quick Stats Grid */}
-          <View className="px-4 mb-2">
+          <AnimatedSection index={1} className="px-4 mb-2">
             <View className="flex-row gap-2">
               <StatCard
                 label="Workouts"
@@ -251,10 +253,10 @@ export default function DashboardScreen() {
                 }
               />
             </View>
-          </View>
+          </AnimatedSection>
 
           {/* Body Goals Section */}
-          <View className="mb-8">
+          <AnimatedSection index={2} className="mb-8">
             <View className="flex-row justify-between items-center mb-4 px-4">
               <Text className="font-archivo-bold text-xl text-wise-text">
                 Body Goals
@@ -446,7 +448,7 @@ export default function DashboardScreen() {
                                   className="h-full rounded-full"
                                   style={{ 
                                     width: `${Math.max(5, progressPercent)}%`,
-                                    backgroundColor: WiseColors.primary 
+                                    backgroundColor: WiseColors.accent 
                                   }}
                                 />
                               </View>
@@ -468,11 +470,11 @@ export default function DashboardScreen() {
                 </View>
               )}
             </Card>
-          </View>
+          </AnimatedSection>
 
           {/* Streaks */}
           {streaks && streaks.length > 0 && (
-            <View className="mb-8">
+            <AnimatedSection index={3} className="mb-8">
               <Text className="font-archivo-bold text-xl text-wise-text mb-4 px-4">
                 Active Streaks
               </Text>
@@ -482,20 +484,20 @@ export default function DashboardScreen() {
                 contentContainerStyle={{ paddingHorizontal: 24, gap: 16 }}
               >
                 {streaks.map((streak) => (
-                  <View key={streak._id} className="w-[280px]">
+                  <Animated.View key={streak._id} className="w-[280px]" entering={FadeIn.delay(100)}>
                     <StreakBadge
                       streakType={streak.streakType}
                       currentCount={streak.currentCount}
                       maxCount={streak.maxCount}
                     />
-                  </View>
+                  </Animated.View>
                 ))}
               </ScrollView>
-            </View>
+            </AnimatedSection>
           )}
 
           {/* Goals Progress */}
-          <View className="mb-8">
+          <AnimatedSection index={4} className="mb-8">
             <View className="flex-row justify-between items-center mb-4 px-4">
               <Text className="font-archivo-bold text-xl text-wise-text">
                 Your Goals
@@ -532,11 +534,11 @@ export default function DashboardScreen() {
                 </Text>
               </Card>
             )}
-          </View>
+          </AnimatedSection>
 
           {/* AI Recommendations */}
           {recommendations && recommendations.length > 0 && (
-            <View className="mb-8">
+            <AnimatedSection index={5} className="mb-8">
               <Text className="font-archivo-bold text-xl text-wise-text mb-4 px-4">
                 AI Insights
               </Text>
@@ -551,17 +553,19 @@ export default function DashboardScreen() {
                   />
                 </View>
               ))}
-            </View>
+            </AnimatedSection>
           )}
 
           {/* Pro Tip */}
-          <Card variant="outlined" className="mx-4 mb-8 bg-wise-subtle" padding="md">
-            <Text className="font-sans text-sm text-wise-primary-dark leading-5">
-              <Text className="text-base">💬 </Text>
-              <Text className="font-sans-bold">Pro Tip: </Text>
-              Log your activities via messenger for real-time coaching!
-            </Text>
-          </Card>
+          <AnimatedSection index={6} animation="subtle">
+            <Card variant="outlined" className="mx-4 mb-8 bg-[#FFF7ED] border-wise-accent/30" padding="md">
+              <Text className="font-sans text-sm text-wise-text leading-5">
+                <Text className="text-base">💬 </Text>
+                <Text className="font-sans-bold text-wise-accent">Pro Tip: </Text>
+                Log your activities via messenger for real-time coaching!
+              </Text>
+            </Card>
+          </AnimatedSection>
           
           <View className="h-10" />
         </ScrollView>

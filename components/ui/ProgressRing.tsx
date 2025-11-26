@@ -29,7 +29,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
 
   useEffect(() => {
     progressValue.value = withDelay(300, withTiming(progress, { duration: 1500 }));
-  }, [progress]);
+  }, [progress, progressValue]);
 
   const animatedProps = useAnimatedProps(() => {
     const strokeDashoffset = circumference - progressValue.value * circumference;

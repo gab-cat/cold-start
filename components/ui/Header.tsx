@@ -28,18 +28,18 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <View 
-      className="bg-wise-background px-6 pb-4"
+      className="bg-wise-background px-6 pb-4 rounded-b-2xl"
       style={{ paddingTop: insets.top + 16 }}
     >
       <View className="flex-row justify-between items-center">
         <View className="flex-1">
           {subtitle && (
-            <Text className="font-sans-medium text-sm text-wise-text-secondary mb-1 uppercase tracking-wide">
+            <Text className="font-sans-medium text-sm text-wise-accent mb-1 uppercase tracking-wide">
               {subtitle}
             </Text>
           )}
-          <Text className="font-archivo-bold text-3xl tracking-tighter text-wise-text">
-            {title || `${greeting()}, ${user?.firstName || 'Friend'}!`}
+          <Text className="font-archivo text-3xl tracking-tighter text-wise-text">
+            {title || <>{greeting()}, <Text className="font-archivo-bold text-wise-accent">{user?.firstName || 'Friend'}</Text>!</>}
           </Text>
         </View>
         

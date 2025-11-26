@@ -1,6 +1,6 @@
-import React, { forwardRef } from 'react';
-import { TextInput as RNTextInput, Text, View, KeyboardTypeOptions } from 'react-native';
 import { WiseColors } from '@/constants/theme';
+import React, { forwardRef } from 'react';
+import { KeyboardTypeOptions, TextInput as RNTextInput, Text, View } from 'react-native';
 
 interface TextInputProps {
   value: string;
@@ -76,3 +76,6 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     );
   }
 );
+
+
+TextInput.displayName = 'TextInput';

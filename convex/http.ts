@@ -53,9 +53,29 @@ router.route({
     if (body.object === "page") {
       for (const entry of body.entry) {
         for (const messaging of entry.messaging) {
+          const senderPsid = messaging.sender.id;
+          const messageId = messaging.message?.mid;
+
+          // Skip if no message ID (shouldn't happen, but safety check)
+          if (!messageId) {
+            console.warn("Received message without mid, skipping");
+            continue;
+          }
+
+          // Check if this message was already processed (deduplication)
+          const alreadyProcessed = await ctx.runMutation(
+            internal.webhookEvents.checkAndMarkMessageProcessed,
+            { messageId, senderPsid }
+          );
+
+          if (alreadyProcessed) {
+            console.log(`Skipping duplicate message: ${messageId}`);
+            continue;
+          }
+
+          // Handle text messages
           if (messaging.message && messaging.message.text) {
             const userMessage = messaging.message.text;
-            const senderPsid = messaging.sender.id;
 
             // Delegate to action for processing
             await ctx.runAction(
@@ -66,6 +86,25 @@ router.route({
                 timestamp: messaging.timestamp,
               }
             );
+          }
+
+          // Handle image attachments (primarily for food scanning)
+          if (messaging.message && messaging.message.attachments) {
+            for (const attachment of messaging.message.attachments) {
+              if (attachment.type === "image" && attachment.payload?.url) {
+                const imageUrl = attachment.payload.url;
+
+                // Delegate to image processing action
+                await ctx.runAction(
+                  api.actions.messenger.processImageMessage,
+                  {
+                    senderPsid,
+                    imageUrl,
+                    timestamp: messaging.timestamp,
+                  }
+                );
+              }
+            }
           }
         }
       }

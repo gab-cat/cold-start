@@ -1,6 +1,7 @@
 import { ActivityDetailCard } from "@/components/ActivityDetailCard";
 import { DailyActivityTimeline } from "@/components/DailyActivityTimeline";
 import { AIBackground } from "@/components/ui/AIBackground";
+import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { Card } from "@/components/ui/Card";
 import { Header } from "@/components/ui/Header";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -9,6 +10,7 @@ import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 import React, { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 export default function ActivitiesScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -71,11 +73,12 @@ export default function ActivitiesScreen() {
 
 
         <ScrollView
-          className="flex-1 mb-24 mt-8"
+          className="flex-1 pt-8"
+          contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
         >
           {/* Date Navigation */}
-          <View className="px-4 mb-4">
+          <AnimatedSection index={0} className="px-4 mb-4">
             <View className="flex-row items-center justify-between mb-4">
               <TouchableOpacity
                 onPress={() => navigateDate(-1)}
@@ -85,7 +88,7 @@ export default function ActivitiesScreen() {
               </TouchableOpacity>
 
               <View className="flex-1 mx-4">
-                <Text className="font-archivo-bold text-xl text-wise-text text-center">
+                <Text className="font-archivo-bold text-2xl text-wise-text text-center">
                   {formatDateShort(selectedDate)}
                 </Text>
                 <Text className="font-sans text-sm text-wise-text-secondary text-center">
@@ -104,16 +107,16 @@ export default function ActivitiesScreen() {
             {/* Today button */}
             <TouchableOpacity
               onPress={() => setSelectedDate(new Date())}
-              className="items-center py-2"
+              className="items-center py-2 px-4 bg-wise-accent/10 rounded-full self-center"
             >
-              <Text className="font-sans-medium text-sm text-wise-primary">
-                Today
+              <Text className="font-sans-medium text-sm text-wise-accent">
+                ← Jump to Today
               </Text>
             </TouchableOpacity>
-          </View>
+          </AnimatedSection>
 
           {/* View Mode Toggle */}
-          <View className="px-4 mb-6">
+          <AnimatedSection index={1} className="px-4 mb-6">
             <View className="flex-row bg-wise-surface rounded-lg p-1">
               <TouchableOpacity
                 onPress={() => setViewMode("timeline")}
@@ -140,66 +143,70 @@ export default function ActivitiesScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </AnimatedSection>
 
           {/* Activities Content */}
-          {activities ? (
-            viewMode === "timeline" ? (
-              <DailyActivityTimeline
-                activities={activities}
-                date={selectedDate.toISOString().split('T')[0]}
-              />
+          <AnimatedSection index={2}>
+            {activities ? (
+              viewMode === "timeline" ? (
+                <DailyActivityTimeline
+                  activities={activities}
+                  date={selectedDate.toISOString().split('T')[0]}
+                />
+              ) : (
+                <View className="px-4">
+                  <Text className="font-archivo-bold text-xl text-wise-text mb-4">
+                    Activity Details
+                  </Text>
+                  {activities.length > 0 ? (
+                    activities.map((activity, index) => (
+                      <Animated.View 
+                        key={activity._id}
+                        entering={FadeInDown.delay(index * 60)}
+                      >
+                        <ActivityDetailCard activity={activity} />
+                      </Animated.View>
+                    ))
+                  ) : (
+                    <Card padding="md">
+                      <View className="items-center justify-center py-8">
+                        <IconSymbol
+                          name="calendar.badge.exclamationmark"
+                          size={48}
+                          color={WiseColors.textSecondary}
+                        />
+                        <Text className="font-archivo-bold text-lg text-wise-text-secondary mt-4 mb-2">
+                          No activities
+                        </Text>
+                        <Text className="font-sans text-sm text-wise-text-secondary text-center">
+                          No activities logged for this date.
+                        </Text>
+                      </View>
+                    </Card>
+                  )}
+                </View>
+              )
             ) : (
               <View className="px-4">
-                <Text className="font-archivo-bold text-xl text-wise-text mb-4">
-                  Activity Details
-                </Text>
-                {activities.length > 0 ? (
-                  activities.map((activity) => (
-                    <ActivityDetailCard
-                      key={activity._id}
-                      activity={activity}
+                <Card padding="md">
+                  <View className="items-center justify-center py-8">
+                    <IconSymbol
+                      name="clock"
+                      size={48}
+                      color={WiseColors.textSecondary}
                     />
-                  ))
-                ) : (
-                  <Card padding="md">
-                    <View className="items-center justify-center py-8">
-                      <IconSymbol
-                        name="calendar.badge.exclamationmark"
-                        size={48}
-                        color={WiseColors.textSecondary}
-                      />
-                      <Text className="font-archivo-bold text-lg text-wise-text-secondary mt-4 mb-2">
-                        No activities
-                      </Text>
-                      <Text className="font-sans text-sm text-wise-text-secondary text-center">
-                        No activities logged for this date.
-                      </Text>
-                    </View>
-                  </Card>
-                )}
+                    <Text className="font-sans-medium text-base text-wise-text-secondary">
+                      Loading activities...
+                    </Text>
+                  </View>
+                </Card>
               </View>
-            )
-          ) : (
-            <View className="px-4">
-              <Card padding="md">
-                <View className="items-center justify-center py-8">
-                  <IconSymbol
-                    name="clock"
-                    size={48}
-                    color={WiseColors.textSecondary}
-                  />
-                  <Text className="font-sans-medium text-base text-wise-text-secondary">
-                    Loading activities...
-                  </Text>
-                </View>
-              </Card>
-            </View>
-          )}
+            )}
+          </AnimatedSection>
 
           {/* Activity Summary */}
           {activities && activities.length > 0 && (
-            <View className="px-4 mt-6">
+            <AnimatedSection index={3} className="px-4 mt-6">
               <Card padding="md">
                 <Text className="font-archivo-bold text-lg text-wise-text mb-4">
                   Day Summary
@@ -254,7 +261,7 @@ export default function ActivitiesScreen() {
                   </View>
                 </View>
               </Card>
-            </View>
+            </AnimatedSection>
           )}
 
           <View className="h-10" />

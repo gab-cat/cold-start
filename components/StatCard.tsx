@@ -30,7 +30,7 @@ export function StatCard({ label, value, target, unit, color = WiseColors.primar
         <View className="flex-1">
           <AnimatedNumber
             value={value}
-            className="text-[32px] leading-10"
+            className="text-[32px] tracking-tighter leading-10"
             style={{ color }}
           />
           <Text className="font-sans-medium text-sm text-wise-text-secondary">

@@ -40,11 +40,11 @@ export default defineSchema({
     userId: v.id("users"),
     // Activity type categories:
     // Exercise: 'workout' | 'walk' | 'run' | 'cycle' | 'swim' | 'yoga' | 'gym' | 'meditation' | 'stretch'
-    // Wellness: 'sleep' | 'hydration' | 'meal'
+    // Wellness: 'sleep' | 'hydration' | 'meal' | 'weight_check'
     // Leisure: 'gaming' | 'computer' | 'reading' | 'tv' | 'music' | 'social' | 'hobby' | 'leisure'
     // Errands/Tasks: 'errand' | 'task' | 'shopping' | 'study'
     activityType: v.string(),
-    activityName: v.string(), // 'Morning run', '8-hour sleep', '2L water', 'Gaming session', etc
+    activityName: v.string(), // 'Morning run', '8-hour sleep', '2L water', 'Gaming session', 'Weight Check', etc
     durationMinutes: v.optional(v.number()),
     distanceKm: v.optional(v.number()),
     caloriesBurned: v.optional(v.number()),
@@ -55,6 +55,10 @@ export default defineSchema({
     sleepQuality: v.optional(v.string()), // 'poor' | 'fair' | 'good' | 'excellent'
     mealType: v.optional(v.string()), // 'breakfast' | 'lunch' | 'dinner' | 'snack'
     mealDescription: v.optional(v.string()), // "Grilled chicken with rice"
+    // Weight tracking fields
+    weightKg: v.optional(v.number()), // Current weight measurement
+    weightChange: v.optional(v.number()), // Weight change since last measurement (negative for loss)
+    previousWeightKg: v.optional(v.number()), // Previous weight for reference
     // Leisure activity metrics
     screenTimeMinutes: v.optional(v.number()), // For gaming, computer, tv activities
     pagesRead: v.optional(v.number()), // For reading activities
@@ -167,6 +171,15 @@ export default defineSchema({
   })
     .index("by_status", ["processingStatus"])
     .index("by_user", ["userId"]),
+
+  // ============ PROCESSED MESSAGE IDS (For deduplication) ============
+  processedMessageIds: defineTable({
+    messageId: v.string(), // Facebook message mid
+    senderPsid: v.string(), // Sender's PSID for context
+    processedAt: v.number(),
+  })
+    .index("by_message_id", ["messageId"])
+    .index("by_processed_at", ["processedAt"]),
 
   // ============ AI RECOMMENDATIONS ============
   recommendations: defineTable({

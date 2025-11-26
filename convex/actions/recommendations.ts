@@ -19,7 +19,15 @@ export const generateDailyInsightsForAllUsers = action({
 
     for (const user of users) {
       try {
-        await generateDailyInsightForUser(ctx, user._id);
+        const insight = await generateDailyInsightForUser(ctx, user._id);
+        
+        // Send push notification for daily insight
+        if (insight) {
+          await ctx.runAction(internal.pushNotifications.sendDailyInsightNotification, {
+            userId: user._id,
+            insightPreview: insight,
+          });
+        }
       } catch (error) {
         console.error(`Error generating daily insight for user ${user._id}:`, error);
       }
@@ -128,7 +136,15 @@ export const generateWeeklySummariesForAllUsers = action({
 
     for (const user of users) {
       try {
-        await generateWeeklySummaryForUser(ctx, user._id);
+        const summary = await generateWeeklySummaryForUser(ctx, user._id);
+        
+        // Send push notification for weekly summary
+        if (summary) {
+          await ctx.runAction(internal.pushNotifications.sendWeeklySummaryNotification, {
+            userId: user._id,
+            summaryPreview: summary,
+          });
+        }
       } catch (error) {
         console.error(`Error generating weekly summary for user ${user._id}:`, error);
       }
@@ -240,7 +256,19 @@ async function checkGoalProgressForUser(ctx: any, userId: any) {
       const daysLeft = goal.targetDate ?
         Math.ceil((new Date(goal.targetDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
-      // If goal is behind schedule, generate a suggestion
+      // Check if goal is completed
+      if (progressPercent >= 100) {
+        // Send goal achieved notification
+        await ctx.runAction(internal.pushNotifications.sendGoalProgressNotification, {
+          userId,
+          goalName: goal.milestone,
+          progressPercent: 100,
+          isCompleted: true,
+        });
+        continue;
+      }
+
+      // If goal is behind schedule, generate a suggestion and send notification
       if (progressPercent < 50 && (!daysLeft || daysLeft < 7)) {
         const suggestion = `You're making progress on your ${goal.milestone} goal (${Math.round(progressPercent)}% complete). ${
           daysLeft ? `With ${daysLeft} days left, ` : ''
@@ -252,6 +280,14 @@ async function checkGoalProgressForUser(ctx: any, userId: any) {
           title: "Goal Progress Check",
           content: suggestion,
           generatedAt: Date.now(),
+        });
+
+        // Send push notification for goal progress
+        await ctx.runAction(internal.pushNotifications.sendGoalProgressNotification, {
+          userId,
+          goalName: goal.milestone,
+          progressPercent,
+          isCompleted: false,
         });
       }
     }
@@ -290,7 +326,29 @@ async function maintainStreaksForUser(ctx: any, userId: any) {
       (Date.now() - streak.lastActivityTimestamp) / (24 * 60 * 60 * 1000)
     );
 
-    if (daysSinceLastActivity >= 2) {
+    // Check for streak milestones (7, 14, 21, 30, 60, 90, 100, etc.)
+    const milestones = [7, 14, 21, 30, 60, 90, 100, 150, 200, 365];
+    const isMilestone = milestones.includes(streak.currentCount);
+
+    if (isMilestone && daysSinceLastActivity < 2) {
+      // Send milestone celebration notification
+      await ctx.runAction(internal.pushNotifications.sendStreakNotification, {
+        userId,
+        streakType: streak.streakType,
+        streakCount: streak.currentCount,
+        isAtRisk: false,
+        isMilestone: true,
+      });
+    } else if (daysSinceLastActivity >= 1 && daysSinceLastActivity < 2) {
+      // Streak is at risk - send warning notification
+      await ctx.runAction(internal.pushNotifications.sendStreakNotification, {
+        userId,
+        streakType: streak.streakType,
+        streakCount: streak.currentCount,
+        isAtRisk: true,
+        isMilestone: false,
+      });
+    } else if (daysSinceLastActivity >= 2) {
       // Generate encouragement to restart streak
       const encouragement = `Your ${streak.streakType} streak of ${streak.currentCount} days is waiting for you! Jump back in today and keep the momentum going.`;
 
@@ -300,6 +358,15 @@ async function maintainStreaksForUser(ctx: any, userId: any) {
         title: "Streak Recovery",
         content: encouragement,
         generatedAt: Date.now(),
+      });
+
+      // Send streak at risk notification (more urgent)
+      await ctx.runAction(internal.pushNotifications.sendStreakNotification, {
+        userId,
+        streakType: streak.streakType,
+        streakCount: streak.currentCount,
+        isAtRisk: true,
+        isMilestone: false,
       });
     }
   }

@@ -1,5 +1,5 @@
 import { cronJobs } from "convex/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const crons = cronJobs();
 
@@ -37,6 +37,14 @@ crons.cron(
   "aggregateDailyStats",
   "55 23 * * *", // Every day at 11:55 PM UTC
   api.actions.recommendations.aggregateDailyStatsAction
+);
+
+// Cleanup old processed message IDs - runs every 6 hours
+// This prevents the processedMessageIds table from growing indefinitely
+crons.cron(
+  "cleanupProcessedMessages",
+  "0 */6 * * *", // Every 6 hours
+  internal.webhookEvents.cleanupOldProcessedMessages
 );
 
 export default crons;

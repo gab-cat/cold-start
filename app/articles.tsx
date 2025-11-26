@@ -1,4 +1,5 @@
 import { AIBackground } from "@/components/ui/AIBackground";
+import { AnimatedListItem, AnimatedSection } from "@/components/ui/AnimatedSection";
 import { Card } from "@/components/ui/Card";
 import { Header } from "@/components/ui/Header";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -8,13 +9,13 @@ import { useAction, useQuery } from "convex/react";
 import { Stack } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    Linking,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Linking,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function ArticlesScreen() {
@@ -23,12 +24,17 @@ export default function ArticlesScreen() {
 
   const fetchArticlesAction = useAction(api.actions.articles.fetchAndCategorizeArticles);
   
-  const articles = useQuery(
-    selectedCategory
-      ? api.articles.getArticlesByCategory
-      : api.articles.getArticles,
-    selectedCategory ? { category: selectedCategory, limit: 50 } : { limit: 50 }
+  const allArticles = useQuery(
+    api.articles.getArticles,
+    selectedCategory === null ? { limit: 50 } : "skip"
   );
+  
+  const categoryArticles = useQuery(
+    api.articles.getArticlesByCategory,
+    selectedCategory !== null ? { category: selectedCategory, limit: 50 } : "skip"
+  );
+  
+  const articles = selectedCategory ? categoryArticles : allArticles;
 
   const categories = [
     { id: "all", label: "All" },
@@ -60,49 +66,51 @@ export default function ArticlesScreen() {
     Linking.openURL(url);
   };
 
-  const renderArticle = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      onPress={() => openArticle(item.url)}
-      className="mb-4"
-      activeOpacity={0.8}
-    >
-      <Card padding="none" className="overflow-hidden">
-        {item.urlToImage && (
-          <Image
-            source={{ uri: item.urlToImage }}
-            className="w-full h-48"
-            resizeMode="cover"
-          />
-        )}
-        <View className="p-4">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-xs font-sans-medium text-wise-primary uppercase">
-              {item.category.replace("_", " ")}
-            </Text>
-            <Text className="text-xs font-sans text-wise-text-secondary">
-              {new Date(item.publishedAt).toLocaleDateString()}
-            </Text>
-          </View>
-          <Text className="text-lg font-archivo-bold text-wise-text mb-2 leading-6">
-            {item.title}
-          </Text>
-          {item.description && (
-            <Text
-              className="text-sm font-sans text-wise-text-secondary leading-5"
-              numberOfLines={3}
-            >
-              {item.description}
-            </Text>
+  const renderArticle = ({ item, index }: { item: any; index: number }) => (
+    <AnimatedListItem index={index}>
+      <TouchableOpacity
+        onPress={() => openArticle(item.url)}
+        className="mb-4"
+        activeOpacity={0.8}
+      >
+        <Card padding="none" className="overflow-hidden">
+          {item.urlToImage && (
+            <Image
+              source={{ uri: item.urlToImage }}
+              className="w-full h-48"
+              resizeMode="cover"
+            />
           )}
-          <View className="flex-row justify-between items-center mt-3">
-            <Text className="text-xs font-sans text-wise-text-tertiary">
-              {item.source.name}
+          <View className="p-4">
+            <View className="flex-row justify-between items-center mb-2">
+              <Text className="text-xs font-sans-medium text-wise-primary uppercase">
+                {item.category.replace("_", " ")}
+              </Text>
+              <Text className="text-xs font-sans text-wise-text-secondary">
+                {new Date(item.publishedAt).toLocaleDateString()}
+              </Text>
+            </View>
+            <Text className="text-lg font-archivo-bold text-wise-text mb-2 leading-6">
+              {item.title}
             </Text>
-            <IconSymbol name="arrow.up.right" size={16} color={WiseColors.primary} />
+            {item.description && (
+              <Text
+                className="text-sm font-sans text-wise-text-secondary leading-5"
+                numberOfLines={3}
+              >
+                {item.description}
+              </Text>
+            )}
+            <View className="flex-row justify-between items-center mt-3">
+              <Text className="text-xs font-sans text-wise-text-tertiary">
+                {item.source.name}
+              </Text>
+              <IconSymbol name="arrow.up.right" size={16} color={WiseColors.primary} />
+            </View>
           </View>
-        </View>
-      </Card>
-    </TouchableOpacity>
+        </Card>
+      </TouchableOpacity>
+    </AnimatedListItem>
   );
 
   return (
@@ -125,7 +133,7 @@ export default function ArticlesScreen() {
         />
 
         {/* Categories */}
-        <View className="px-6 mb-4">
+        <AnimatedSection index={0} className="px-6 mb-4">
           <FlatList
             data={categories}
             horizontal
@@ -152,7 +160,7 @@ export default function ArticlesScreen() {
               </TouchableOpacity>
             )}
           />
-        </View>
+        </AnimatedSection>
 
         {/* Articles List */}
         {articles === undefined ? (

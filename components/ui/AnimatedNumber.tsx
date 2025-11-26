@@ -33,7 +33,7 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
         easing: Easing.out(Easing.exp),
       })
     );
-  }, [value, delay, duration]);
+  }, [value, delay, duration, animatedValue]);
 
   const animatedProps = useAnimatedProps(() => {
     return {
