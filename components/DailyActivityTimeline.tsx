@@ -104,19 +104,70 @@ const getActivityColor = (activityType: string): string => {
   return colorMap[activityType] || WiseColors.primary;
 };
 
+// Get device timezone with fallback
+const getDeviceTimezone = (): string => {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && tz !== 'UTC') {
+      return tz;
+    }
+  } catch {
+    // Intl not available
+  }
+  // Fallback: try to detect from date offset
+  const offset = new Date().getTimezoneOffset();
+  // Philippines is UTC+8, offset is -480 minutes
+  if (offset === -480) {
+    return 'Asia/Manila';
+  }
+  // Return undefined to let the system decide
+  return 'Asia/Manila'; // Default to Manila for this app's primary users
+};
+
+const DEVICE_TIMEZONE = getDeviceTimezone();
+
 const formatTime = (timestamp: number): string => {
-  return new Date(timestamp).toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
+  const date = new Date(timestamp);
+  // Use Intl.DateTimeFormat with explicit timezone for reliable conversion
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: DEVICE_TIMEZONE,
+    }).format(date);
+  } catch {
+    // Fallback if Intl is not available - manually adjust for PH time (UTC+8)
+    const phDate = new Date(timestamp + (8 * 60 * 60 * 1000));
+    const hours = phDate.getUTCHours();
+    const minutes = phDate.getUTCMinutes();
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    return `${displayHour}:${minutes.toString().padStart(2, '0')} ${period}`;
+  }
 };
 
 const getActivityTime = (activity: Activity): number => {
   // Use timeStarted if available, otherwise use loggedAt
-  // Adjust by -8 hours (UTC offset fix)
-  const timestamp = activity.timeStarted || activity.loggedAt;
-  return timestamp - (8 * 60 * 60 * 1000);
+  // The timestamp is stored in UTC, formatTime will handle timezone conversion
+  return activity.timeStarted || activity.loggedAt;
+};
+
+const getLocalHour = (timestamp: number): number => {
+  // Get the hour in local timezone for grouping
+  const date = new Date(timestamp);
+  try {
+    const timeString = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      hour12: false,
+      timeZone: DEVICE_TIMEZONE,
+    }).format(date);
+    return parseInt(timeString, 10);
+  } catch {
+    // Fallback: manually calculate PH hour (UTC+8)
+    const phDate = new Date(timestamp + (8 * 60 * 60 * 1000));
+    return phDate.getUTCHours();
+  }
 };
 
 const sortActivitiesByTime = (activities: Activity[]): Activity[] => {
@@ -127,7 +178,7 @@ const groupActivitiesByHour = (activities: Activity[]): Record<number, Activity[
   const grouped: Record<number, Activity[]> = {};
 
   activities.forEach(activity => {
-    const hour = new Date(getActivityTime(activity)).getHours();
+    const hour = getLocalHour(getActivityTime(activity));
     if (!grouped[hour]) {
       grouped[hour] = [];
     }
@@ -145,9 +196,8 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
   let timeDisplay = formatTime(startTime);
   
   if (activity.timeEnded) {
-    // Adjust end time by -8 hours as well
-    const adjustedEndTime = activity.timeEnded - (8 * 60 * 60 * 1000);
-    timeDisplay = `${timeDisplay} - ${formatTime(adjustedEndTime)}`;
+    // Use timeEnded directly - toLocaleTimeString handles timezone
+    timeDisplay = `${timeDisplay} - ${formatTime(activity.timeEnded)}`;
   }
 
   return (

@@ -39,6 +39,12 @@ export const generatePersonalizedGoals = action({
 
 // Generate goals for a specific user
 async function generateGoalsForUser(ctx: any, userId: any): Promise<number> {
+  // Delete old AI-generated goals before creating new ones
+  const deletedCount = await ctx.runMutation(internal.internalMutations.deleteUserAIGoals, { userId });
+  if (deletedCount > 0) {
+    console.log(`Deleted ${deletedCount} old AI-generated goals for user ${userId}`);
+  }
+
   // Gather comprehensive user data
   const userProfile = await ctx.runQuery(internal.agentQueries.getUserProfile, { userId });
   const recentActivities = await ctx.runQuery(internal.agentQueries.getUserActivities, {

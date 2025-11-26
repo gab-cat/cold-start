@@ -1,5 +1,16 @@
-import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { internalQuery } from "./_generated/server";
+import { getCurrentTimeInfo } from "./utils";
+
+// Get current time context for AI agent
+export const getCurrentTime = internalQuery({
+  args: {
+    timezone: v.optional(v.string()),
+  },
+  handler: async (_ctx, args) => {
+    return getCurrentTimeInfo(args.timezone);
+  },
+});
 
 // Get user profile information for AI agent
 export const getUserProfile = internalQuery({

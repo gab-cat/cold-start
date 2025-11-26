@@ -16,17 +16,24 @@ export const executeAgentAction = internalMutation({
 
     switch (actionMutation) {
     case "userActivity.log":
+      // Get user's timezone for proper time parsing
+      const user = await ctx.db.get(userId);
+      const userTimezone = user?.preferences?.preferredTimezone || "UTC";
+      
       // Fallback: Generate activityName from activityType if missing
       const activityName = params.activityName ||
           generateActivityName(params.activityType);
 
       // Convert time strings to timestamps if needed
+      // parseTimeString now handles relative times like "an hour ago", "just now", etc.
+      // and properly converts times from user's timezone to UTC
       let timeStarted = params.timeStarted;
       let timeEnded = params.timeEnded;
+      const now = new Date();
       
       if (typeof timeStarted === "string") {
-        // Try parsing as natural language time string first (e.g., "1pm", "2pm")
-        const parsedTime = parseTimeString(timeStarted);
+        // Try parsing as natural language time string (includes relative times)
+        const parsedTime = parseTimeString(timeStarted, now, userTimezone);
         if (parsedTime !== null) {
           timeStarted = parsedTime;
         } else {
@@ -37,8 +44,8 @@ export const executeAgentAction = internalMutation({
       }
       
       if (typeof timeEnded === "string") {
-        // Try parsing as natural language time string first (e.g., "1pm", "2pm")
-        const parsedTime = parseTimeString(timeEnded);
+        // Try parsing as natural language time string (includes relative times)
+        const parsedTime = parseTimeString(timeEnded, now, userTimezone);
         if (parsedTime !== null) {
           timeEnded = parsedTime;
         } else {
@@ -110,6 +117,17 @@ export const executeAgentAction = internalMutation({
       } catch (error) {
         // Log error but don't fail the activity insertion
         console.error("Error updating goal progress:", error);
+      }
+
+      // Trigger daily stats aggregation for this activity's date
+      try {
+        const activityDate = new Date(loggedAt).toISOString().split("T")[0];
+        await ctx.scheduler.runAfter(0, internal.internalMutations.aggregateDailyStats, {
+          userId,
+          date: activityDate,
+        });
+      } catch (error) {
+        console.error("Error scheduling daily stats aggregation:", error);
       }
 
       return activityId;
@@ -489,6 +507,196 @@ export const createHealthNotesEmbedding = internalMutation({
       contentType: "health_note",
       contentChunk: `Health notes: ${args.notes}`,
     });
+  },
+});
+
+// Delete all AI-generated goals for a user before regenerating new ones
+export const deleteUserAIGoals = internalMutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<number> => {
+    // Get all goals for this user that were created by AI
+    const aiGoals = await ctx.db
+      .query("userGoals")
+      .withIndex("by_user_status", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("createdBy"), "ai"))
+      .collect();
+
+    // Delete each AI-generated goal
+    for (const goal of aiGoals) {
+      await ctx.db.delete(goal._id);
+    }
+
+    console.log(`Deleted ${aiGoals.length} AI-generated goals for user ${args.userId}`);
+    return aiGoals.length;
+  },
+});
+
+// Aggregate daily stats for a specific user and date
+export const aggregateDailyStats = internalMutation({
+  args: {
+    userId: v.id("users"),
+    date: v.string(), // 'YYYY-MM-DD' format
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const { userId, date } = args;
+    
+    // Parse date to get start and end of day in UTC
+    const startOfDay = new Date(date + "T00:00:00Z").getTime();
+    const endOfDay = new Date(date + "T23:59:59.999Z").getTime();
+    
+    // Get all activities for this user on this date
+    const allActivities = await ctx.db
+      .query("activities")
+      .withIndex("by_user_date", (q) => q.eq("userId", userId))
+      .collect();
+    
+    const dayActivities = allActivities.filter(
+      (a) => a.loggedAt >= startOfDay && a.loggedAt <= endOfDay
+    );
+    
+    // Calculate aggregated stats
+    let steps = 0;
+    let workoutCount = 0;
+    let workoutMinutes = 0;
+    let caloriesConsumed = 0;
+    let caloriesBurned = 0;
+    let caloriesBreakfast = 0;
+    let caloriesLunch = 0;
+    let caloriesDinner = 0;
+    let caloriesSnacks = 0;
+    let hydrationMl = 0;
+    let sleepHours = 0;
+    let leisureMinutes = 0;
+    let screenTimeMinutes = 0;
+    let sleepQuality: string | undefined = undefined;
+    
+    const workoutTypes = ["workout", "run", "walk", "cycle", "swim", "yoga", "gym", "stretch"];
+    const leisureTypes = ["gaming", "computer", "reading", "tv", "music", "social", "hobby", "leisure"];
+    const screenTypes = ["gaming", "computer", "tv"];
+    
+    for (const activity of dayActivities) {
+      // Steps from walk/run (1km ≈ 1300 steps)
+      if (activity.activityType === "walk" || activity.activityType === "run") {
+        if (activity.distanceKm) {
+          steps += Math.round(activity.distanceKm * 1300);
+        }
+      }
+      
+      // Workout tracking
+      if (workoutTypes.includes(activity.activityType)) {
+        workoutCount++;
+        workoutMinutes += activity.durationMinutes || 0;
+      }
+      
+      // Calories burned (from workouts/exercise)
+      if (activity.caloriesBurned) {
+        caloriesBurned += activity.caloriesBurned;
+      }
+      
+      // Calories consumed (from meals)
+      if (activity.caloriesConsumed) {
+        caloriesConsumed += activity.caloriesConsumed;
+        
+        // Breakdown by meal type
+        const mealType = activity.mealType?.toLowerCase();
+        if (mealType === "breakfast") {
+          caloriesBreakfast += activity.caloriesConsumed;
+        } else if (mealType === "lunch") {
+          caloriesLunch += activity.caloriesConsumed;
+        } else if (mealType === "dinner") {
+          caloriesDinner += activity.caloriesConsumed;
+        } else if (mealType === "snack" || mealType === "snacks") {
+          caloriesSnacks += activity.caloriesConsumed;
+        }
+      }
+      
+      // Hydration
+      if (activity.activityType === "hydration" && activity.hydrationMl) {
+        hydrationMl += activity.hydrationMl;
+      }
+      
+      // Sleep
+      if (activity.activityType === "sleep") {
+        sleepHours += activity.sleepHours || 0;
+        if (activity.sleepQuality) {
+          sleepQuality = activity.sleepQuality; // Take the latest sleep quality
+        }
+      }
+      
+      // Leisure and screen time
+      if (leisureTypes.includes(activity.activityType)) {
+        leisureMinutes += activity.durationMinutes || 0;
+        if (screenTypes.includes(activity.activityType)) {
+          screenTimeMinutes += activity.screenTimeMinutes || activity.durationMinutes || 0;
+        }
+      }
+    }
+    
+    const netCalories = caloriesConsumed - caloriesBurned;
+    const now = Date.now();
+    
+    // Check if daily stats already exist for this date
+    const existing = await ctx.db
+      .query("dailyStats")
+      .withIndex("by_user_date", (q) => q.eq("userId", userId).eq("date", date))
+      .first();
+    
+    const statsData = {
+      userId,
+      date,
+      steps,
+      workoutCount,
+      workoutMinutes,
+      caloriesConsumed,
+      caloriesBurned,
+      netCalories,
+      caloriesBreakfast,
+      caloriesLunch,
+      caloriesDinner,
+      caloriesSnacks,
+      hydrationMl,
+      sleepHours,
+      sleepQuality,
+      leisureMinutes,
+      screenTimeMinutes,
+      totalActivities: dayActivities.length,
+      lastUpdatedAt: now,
+    };
+    
+    if (existing) {
+      // Update existing record
+      await ctx.db.patch(existing._id, statsData);
+    } else {
+      // Insert new record
+      await ctx.db.insert("dailyStats", {
+        ...statsData,
+        createdAt: now,
+      });
+    }
+    
+    console.log(`Aggregated daily stats for user ${userId} on ${date}: ${dayActivities.length} activities`);
+  },
+});
+
+// Aggregate daily stats for all users for a specific date
+export const aggregateDailyStatsForAllUsers = internalMutation({
+  args: {
+    date: v.string(), // 'YYYY-MM-DD' format
+  },
+  handler: async (ctx, args): Promise<{ usersProcessed: number }> => {
+    const users = await ctx.db.query("users").collect();
+    
+    for (const user of users) {
+      await ctx.scheduler.runAfter(0, internal.internalMutations.aggregateDailyStats, {
+        userId: user._id,
+        date: args.date,
+      });
+    }
+    
+    console.log(`Scheduled daily stats aggregation for ${users.length} users on ${args.date}`);
+    return { usersProcessed: users.length };
   },
 });
 

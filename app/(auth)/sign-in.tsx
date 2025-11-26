@@ -45,7 +45,7 @@ export default function SignInScreen() {
           </View>
           
           <Text className="font-archivo-bold tracking-[-0.07em] text-7xl text-wise-text mb-4 leading-tight">
-            Unlock your potential.
+            Reach your peak.
           </Text>
           <Text className="font-sans text-lg text-wise-text-secondary leading-7">
             Your personal AI fitness companion. Track, analyze, and improve your health with intelligent insights.

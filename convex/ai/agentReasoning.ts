@@ -35,10 +35,36 @@ export async function runAgentReasoning(
   userMessage: string,
   intent: any,
   userContext: any,
-  userProfile: any
+  userProfile: any,
+  currentTime?: {
+    timestamp: number;
+    isoString: string;
+    localTime: string;
+    dayOfWeek: string;
+    hour: number;
+    timezone: string;
+  }
 ): Promise<StructuredAgentResponse> {
 
+  // Default current time if not provided
+  const timeContext = currentTime || {
+    timestamp: Date.now(),
+    isoString: new Date().toISOString(),
+    localTime: new Date().toLocaleString(),
+    dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+    hour: new Date().getHours(),
+    timezone: "UTC",
+  };
+
   const contextSummary = `
+CURRENT TIME CONTEXT:
+- Current Timestamp: ${timeContext.timestamp}
+- Current Date/Time (ISO): ${timeContext.isoString}
+- Local Time: ${timeContext.localTime}
+- Day of Week: ${timeContext.dayOfWeek}
+- Current Hour: ${timeContext.hour}
+- User Timezone: ${timeContext.timezone}
+
 USER PROFILE:
 - Name: ${userProfile.displayName || "User"}
 - Age: ${userProfile.healthProfile?.age || "Not set"}
@@ -108,20 +134,49 @@ AVAILABLE FUNCTIONS (use these exact mutation names):
   
   For MEAL activities: Include caloriesConsumed (calories from food), mealDescription (detailed description), mealType ('breakfast'|'lunch'|'dinner'|'snack')
   
-  TIME FORMAT: timeStarted and timeEnded accept:
-    - Natural language time strings: "1pm", "2pm", "1:30pm", "13:00", "noon", "midnight" (will be parsed relative to today's date)
+  TIME FORMAT AND INFERENCE RULES:
+  CRITICAL: ALWAYS try to generate timeStarted and timeEnded for EVERY activity. This is extremely important for tracking.
+  
+  Supported time formats for timeStarted and timeEnded:
+    - Relative times: "an hour ago", "30 minutes ago", "2 hours ago", "just now", "yesterday", "this morning", "last night", "earlier today"
+    - Natural language: "1pm", "2pm", "1:30pm", "13:00", "noon", "midnight"
     - ISO date strings: "2024-01-01T13:00:00Z"
     - Timestamps (numbers): 1704110400000
-    When user mentions times like "from 1pm to 2pm", extract and use those time strings directly.
+  
+  TIME INFERENCE GUIDELINES (use current time context above):
+  1. When user says "just finished" or "just did" → timeEnded = "just now", calculate timeStarted based on typical duration
+  2. When user says "an hour ago" → Use that as timeStarted, calculate timeEnded based on duration or assume activity just ended
+  3. When user mentions "for X minutes/hours" → Use duration to calculate timeEnded from timeStarted
+  4. When user says "from X to Y" → Extract both times directly
+  5. When user gives only one time → Infer the other based on activity type and duration
+  
+  ACTIVITY-BASED TIME GUESSING (when no explicit time given, use current hour to make educated guesses):
+  - "morning run/walk/workout" → timeStarted: "7am", duration: 30-45 mins
+  - "lunch" → timeStarted: "12pm", duration: 30 mins
+  - "breakfast" → timeStarted: "8am", duration: 20 mins
+  - "dinner" → timeStarted: "7pm", duration: 45 mins
+  - "went to bed" / "slept" → If current hour is morning, assume last night around 10-11pm
+  - "afternoon workout" → timeStarted: "3pm", duration: 45 mins
+  - "evening walk" → timeStarted: "6pm", duration: 30 mins
+  - Shopping/errands without time → If logged during day, assume started 1-2 hours ago
+  - Study session → If logged now, assume it just ended, started based on duration mentioned
+  
+  RELATIVE TIME CALCULATION (always calculate from CURRENT TIME above):
+  - "an hour ago" → Current timestamp - 1 hour = timeStarted
+  - "30 minutes ago" → Current timestamp - 30 mins = timeStarted  
+  - "this morning" → 7:00 AM today
+  - "earlier today" → 2 hours before current time
+  - "yesterday" → Same time yesterday
+  - "last night" → 10:00 PM yesterday
+  
+  ALWAYS include both timeStarted and timeEnded when possible. Even if guessing, provide your best estimate based on context.
   
   Examples:
-    - activityType: "run", activityName: "Morning Run", timeStarted: "9:00am", timeEnded: "10:00am"
-    - activityType: "walk", activityName: "Evening Walk", timeStarted: "6pm", timeEnded: "7pm"
-    - activityType: "sleep", activityName: "Night Sleep"
-    - activityType: "meal", activityName: "Lunch", mealType: "lunch", mealDescription: "Grilled chicken with rice and vegetables", caloriesConsumed: 650
-    - activityType: "shopping", activityName: "Grocery Shopping", durationMinutes: 60, caloriesBurned: 120, distanceKm: 2.5
-    - activityType: "study", activityName: "Study Session", durationMinutes: 30
-    - activityType: "errand", activityName: "Running Errands", durationMinutes: 45, caloriesBurned: 100, distanceKm: 1.5
+    - "Just finished a 30 min run" → timeStarted: "30 minutes ago", timeEnded: "just now", durationMinutes: 30
+    - "Went running an hour ago" → timeStarted: "an hour ago", timeEnded: "30 minutes ago" (assume 30 min run)
+    - "Had breakfast" (logged at 9am) → timeStarted: "8am", timeEnded: "8:30am", durationMinutes: 30
+    - "Morning run" (no time given) → timeStarted: "7am", timeEnded: "7:45am", durationMinutes: 45
+    - "Studied for 2 hours" → timeStarted: "2 hours ago", timeEnded: "just now", durationMinutes: 120
 - "userStreaks.update": Update streak count (params: streakType)
 - "userGoals.adjust": Adjust goal values (params: goalId, newValue)
 - "userProfile.updateContext": Update user context (no params needed)

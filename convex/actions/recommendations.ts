@@ -304,3 +304,26 @@ async function maintainStreaksForUser(ctx: any, userId: any) {
     }
   }
 }
+
+// Aggregate daily stats for all users (called by cron job)
+// This is a wrapper action that computes the date at runtime
+export const aggregateDailyStatsAction = action({
+  args: {},
+  handler: async (ctx: ActionCtx): Promise<{ success: boolean; date: string; usersProcessed: number }> => {
+    // Compute today's date at runtime
+    const today = new Date().toISOString().split("T")[0];
+    console.log(`Starting daily stats aggregation for ${today}...`);
+
+    // Call the internal mutation with the computed date
+    const result = await ctx.runMutation(internal.internalMutations.aggregateDailyStatsForAllUsers, {
+      date: today,
+    });
+
+    console.log(`Daily stats aggregation completed for ${today}`);
+    return { 
+      success: true, 
+      date: today, 
+      usersProcessed: result.usersProcessed 
+    };
+  },
+});

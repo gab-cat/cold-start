@@ -66,6 +66,9 @@ export const createUser = mutation({
         underlyingConditions: undefined,
         height: undefined,
         weight: undefined,
+        dailyCalorieGoal: 2000, // Default calorie goal
+        dailyWaterGoal: 2000, // Default water goal in ml
+        dailySleepGoal: 8, // Default sleep goal in hours
       },
       preferences: {
         preferredTimezone: undefined,
@@ -128,6 +131,9 @@ export const updateCurrentUserProfile = mutation({
         underlyingConditions: v.optional(v.string()),
         height: v.optional(v.number()),
         weight: v.optional(v.number()),
+        dailyCalorieGoal: v.optional(v.number()),
+        dailyWaterGoal: v.optional(v.number()),
+        dailySleepGoal: v.optional(v.number()),
       })
     ),
     preferences: v.optional(

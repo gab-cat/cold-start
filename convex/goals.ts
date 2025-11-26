@@ -1,6 +1,6 @@
-import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { internalQuery, mutation, query } from "./_generated/server";
 
 // Get user goals
 export const getUserGoals = query({
@@ -102,6 +102,71 @@ export const updateGoalStatus = mutation({
       status: args.status,
       updatedAt: Date.now(),
     });
+  },
+});
+
+// Upsert weight goal - creates if doesn't exist, updates if exists
+export const upsertWeightGoal = mutation({
+  args: {
+    userId: v.id("users"),
+    targetWeight: v.number(),
+    currentWeight: v.number(),
+    targetDate: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Look for existing active weight_loss goal
+    const existingGoal = await ctx.db
+      .query("userGoals")
+      .withIndex("by_user_status", (q) => 
+        q.eq("userId", args.userId).eq("status", "active")
+      )
+      .filter((q) => q.eq(q.field("goalType"), "weight_loss"))
+      .first();
+    
+    if (existingGoal) {
+      // Update existing goal
+      await ctx.db.patch(existingGoal._id, {
+        goalValue: args.targetWeight,
+        currentProgress: args.currentWeight,
+        targetDate: args.targetDate,
+        updatedAt: now,
+      });
+      return existingGoal._id;
+    } else {
+      // Create new goal
+      return await ctx.db.insert("userGoals", {
+        userId: args.userId,
+        goalType: "weight_loss",
+        goalValue: args.targetWeight,
+        goalUnit: "kg",
+        currentProgress: args.currentWeight,
+        targetDate: args.targetDate,
+        status: "active",
+        milestone: `Reach target weight of ${args.targetWeight}kg`,
+        aiAdjustable: true,
+        createdBy: "user",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  },
+});
+
+// Get weight goal for a user
+export const getWeightGoal = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("userGoals")
+      .withIndex("by_user_status", (q) => 
+        q.eq("userId", args.userId).eq("status", "active")
+      )
+      .filter((q) => q.eq(q.field("goalType"), "weight_loss"))
+      .first();
   },
 });
 

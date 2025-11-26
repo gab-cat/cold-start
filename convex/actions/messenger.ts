@@ -65,6 +65,13 @@ export const processMessage = action({
       // Step 2: Parse intent
       const intent = await parseUserIntent(args.userMessage);
 
+      // Step 2.5: Get current time context for the agent
+      const userTimezone = user.preferences?.preferredTimezone || "UTC";
+      const currentTime = await ctx.runQuery(
+        internal.agentQueries.getCurrentTime,
+        { timezone: userTimezone }
+      );
+
       // Step 3: Retrieve user context via RAG
       const userContext = await ctx.runAction(
         internal.rag.retrieveUserContext,
@@ -74,12 +81,13 @@ export const processMessage = action({
         }
       );
 
-      // Step 4: Run agentic reasoning
+      // Step 4: Run agentic reasoning with current time context
       const agentResponse = await runAgentReasoning(
         args.userMessage,
         intent,
         userContext,
-        user
+        user,
+        currentTime
       );
 
       // Step 4.5: Execute any data queries the agent requested

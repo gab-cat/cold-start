@@ -31,4 +31,12 @@ crons.cron(
   api.actions.recommendations.maintainStreaksForAllUsers
 );
 
+// Daily stats aggregation - runs every day at 11:55 PM UTC (aggregate before day ends)
+// Uses an action wrapper to compute the date at runtime
+crons.cron(
+  "aggregateDailyStats",
+  "55 23 * * *", // Every day at 11:55 PM UTC
+  api.actions.recommendations.aggregateDailyStatsAction
+);
+
 export default crons;

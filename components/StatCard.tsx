@@ -18,7 +18,7 @@ export function StatCard({ label, value, target, unit, color = WiseColors.primar
   const percentage = target ? Math.min(value / target, 1) : 0;
 
   return (
-    <Card className="flex-1 min-w-[45%] mb-4" padding="lg">
+    <Card className="flex-1 min-w-[45%] mb-4" padding="md">
       <View className="flex-row justify-between items-center mb-2">
         <Text className="font-sans-medium text-sm text-wise-text-secondary uppercase tracking-tight">
           {label}

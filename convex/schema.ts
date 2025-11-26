@@ -18,6 +18,9 @@ export default defineSchema({
       underlyingConditions: v.optional(v.string()),
       height: v.optional(v.number()), // Height in cm
       weight: v.optional(v.number()), // Weight in kg
+      dailyCalorieGoal: v.optional(v.number()), // Daily calorie target (default 2000)
+      dailyWaterGoal: v.optional(v.number()), // Daily water target in ml (default 2000)
+      dailySleepGoal: v.optional(v.number()), // Daily sleep target in hours (default 8)
     }),
     preferences: v.object({
       preferredTimezone: v.optional(v.string()),
@@ -196,5 +199,38 @@ export default defineSchema({
   })
     .index("by_category", ["category"])
     .index("by_publishedAt", ["publishedAt"]),
+
+  // ============ DAILY STATS (Pre-computed for performance) ============
+  dailyStats: defineTable({
+    userId: v.id("users"),
+    date: v.string(), // 'YYYY-MM-DD' format
+    // Steps & Activity
+    steps: v.number(),
+    workoutCount: v.number(),
+    workoutMinutes: v.number(),
+    // Calories
+    caloriesConsumed: v.number(),
+    caloriesBurned: v.number(),
+    netCalories: v.number(), // consumed - burned
+    // Meal breakdown
+    caloriesBreakfast: v.number(),
+    caloriesLunch: v.number(),
+    caloriesDinner: v.number(),
+    caloriesSnacks: v.number(),
+    // Wellness
+    hydrationMl: v.number(),
+    sleepHours: v.number(),
+    sleepQuality: v.optional(v.string()),
+    // Leisure & Screen time
+    leisureMinutes: v.number(),
+    screenTimeMinutes: v.number(),
+    // Totals
+    totalActivities: v.number(),
+    // Metadata
+    lastUpdatedAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_user_date", ["userId", "date"])
+    .index("by_user_recent", ["userId", "lastUpdatedAt"]),
 });
 
