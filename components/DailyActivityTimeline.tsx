@@ -254,7 +254,7 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
 
         {/* Key metrics */}
         <View className="flex-row flex-wrap gap-3 mb-2">
-          {activity.caloriesBurned && (
+          {!!activity.caloriesBurned && (
             <View className="flex-row items-center">
               <IconSymbol name="flame" size={12} color="#F59E0B" />
               <Text className="font-sans text-sm text-wise-text ml-1">
@@ -262,7 +262,7 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
               </Text>
             </View>
           )}
-          {activity.caloriesConsumed && (
+          {!!activity.caloriesConsumed && (
             <View className="flex-row items-center">
               <IconSymbol name="fork.knife" size={12} color="#EF4444" />
               <Text className="font-sans text-sm text-wise-text ml-1">
@@ -270,7 +270,7 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
               </Text>
             </View>
           )}
-          {activity.distanceKm && (
+          {!!activity.distanceKm && (
             <View className="flex-row items-center">
               <IconSymbol name="map" size={12} color={WiseColors.primary} />
               <Text className="font-sans text-sm text-wise-text ml-1">
@@ -278,7 +278,7 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
               </Text>
             </View>
           )}
-          {activity.durationMinutes && (
+          {!!activity.durationMinutes && (
             <View className="flex-row items-center">
               <IconSymbol name="clock" size={12} color={WiseColors.textSecondary} />
               <Text className="font-sans text-sm text-wise-text ml-1">
@@ -286,7 +286,7 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
               </Text>
             </View>
           )}
-          {activity.hydrationMl && (
+          {!!activity.hydrationMl && (
             <View className="flex-row items-center">
               <IconSymbol name="drop" size={12} color="#06B6D4" />
               <Text className="font-sans text-sm text-wise-text ml-1">
@@ -295,7 +295,7 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
             </View>
           )}
           {/* Leisure metrics */}
-          {activity.screenTimeMinutes && (
+          {!!activity.screenTimeMinutes && (
             <View className="flex-row items-center">
               <IconSymbol name="desktopcomputer" size={12} color="#64748B" />
               <Text className="font-sans text-sm text-wise-text ml-1">
@@ -303,7 +303,7 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
               </Text>
             </View>
           )}
-          {activity.pagesRead && (
+          {!!activity.pagesRead && (
             <View className="flex-row items-center">
               <IconSymbol name="book" size={12} color="#A855F7" />
               <Text className="font-sans text-sm text-wise-text ml-1">
@@ -311,7 +311,7 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
               </Text>
             </View>
           )}
-          {activity.socialInteractions && (
+          {!!activity.socialInteractions && (
             <View className="flex-row items-center">
               <IconSymbol name="person.2" size={12} color="#14B8A6" />
               <Text className="font-sans text-sm text-wise-text ml-1">
