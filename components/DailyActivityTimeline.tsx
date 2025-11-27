@@ -1,4 +1,8 @@
 import { WiseColors } from "@/constants/theme";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useQuery } from "convex/react";
+import { Image } from "expo-image";
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { Card } from "./ui/Card";
@@ -25,6 +29,9 @@ interface Activity {
   timeStarted?: number;
   timeEnded?: number;
   mood?: string;
+  // Image fields
+  imageId?: Id<"_storage">;
+  originalImageUrl?: string;
   notes: string;
   loggedAt: number;
 }
@@ -192,6 +199,12 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
   const icon = getActivityIcon(activity.activityType);
   const color = getActivityColor(activity.activityType);
   
+  // Fetch image URL from storage if imageId exists
+  const imageUrl = useQuery(
+    api.storage.getImageUrl,
+    activity.imageId ? { storageId: activity.imageId } : "skip"
+  );
+  
   const startTime = getActivityTime(activity);
   let timeDisplay = formatTime(startTime);
   
@@ -199,6 +212,8 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
     // Use timeEnded directly - toLocaleTimeString handles timezone
     timeDisplay = `${timeDisplay} - ${formatTime(activity.timeEnded)}`;
   }
+
+  const hasImage = activity.activityType === "meal" && (imageUrl || activity.originalImageUrl);
 
   return (
     <View className="flex-row items-start mb-4">
@@ -217,18 +232,30 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
       {/* Activity content */}
       <View className="flex-1">
         <View className="flex-row items-center justify-between mb-2">
-          <View className="flex-row items-center">
-            <View
-              className="w-8 h-8 rounded-full items-center justify-center mr-2"
-              style={{ backgroundColor: `${color}20` }}
-            >
-              <IconSymbol name={icon as any} size={16} color={color} />
-            </View>
-            <Text className="font-archivo-bold text-base text-wise-text">
+          <View className="flex-row items-center flex-1">
+            {/* Image thumbnail for meals */}
+            {hasImage ? (
+              <View className="w-10 h-10 rounded-xl overflow-hidden mr-2">
+                <Image
+                  source={{ uri: imageUrl || activity.originalImageUrl }}
+                  style={{ width: 40, height: 40 }}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </View>
+            ) : (
+              <View
+                className="w-8 h-8 rounded-full items-center justify-center mr-2"
+                style={{ backgroundColor: `${color}20` }}
+              >
+                <IconSymbol name={icon as any} size={16} color={color} />
+              </View>
+            )}
+            <Text className="font-archivo-bold text-base text-wise-text flex-1" numberOfLines={1}>
               {activity.activityName}
             </Text>
           </View>
-          <Text className="font-sans-medium text-sm text-wise-text-secondary">
+          <Text className="font-sans-medium text-sm text-wise-text-secondary ml-2">
             {timeDisplay}
           </Text>
         </View>

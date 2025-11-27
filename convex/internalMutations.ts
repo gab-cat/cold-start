@@ -97,6 +97,8 @@ export const executeAgentAction = internalMutation({
         timeStarted,
         timeEnded,
         mood: params.mood,
+        imageId: params.imageId,
+        originalImageUrl: params.originalImageUrl,
         notes: params.notes || "",
         loggedAt,
         sourceType: "messenger",

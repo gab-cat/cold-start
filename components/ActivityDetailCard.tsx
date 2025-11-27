@@ -1,4 +1,8 @@
 import { WiseColors } from "@/constants/theme";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useQuery } from "convex/react";
+import { Image } from "expo-image";
 import React from "react";
 import { Text, View } from "react-native";
 import { Card } from "./ui/Card";
@@ -25,6 +29,9 @@ interface Activity {
   timeStarted?: number;
   timeEnded?: number;
   mood?: string;
+  // Image fields
+  imageId?: Id<"_storage">;
+  originalImageUrl?: string;
   notes: string;
   loggedAt: number;
 }
@@ -125,6 +132,12 @@ const formatDuration = (minutes?: number): string => {
 export function ActivityDetailCard({ activity }: ActivityDetailCardProps) {
   const icon = getActivityIcon(activity.activityType);
   const color = getActivityColor(activity.activityType);
+
+  // Fetch image URL from storage if imageId exists
+  const imageUrl = useQuery(
+    api.storage.getImageUrl,
+    activity.imageId ? { storageId: activity.imageId } : "skip"
+  );
 
   return (
     <Card className="mb-3" padding="sm">
@@ -302,6 +315,27 @@ export function ActivityDetailCard({ activity }: ActivityDetailCardProps) {
           <Text className="font-sans text-sm text-wise-text">
             {activity.notes}
           </Text>
+        </View>
+      )}
+
+      {/* Activity Image (if available) */}
+      {(imageUrl || activity.originalImageUrl) && (
+        <View className="mt-3 pt-3 border-t border-wise-border">
+          <View className="flex-row items-center mb-2">
+            <IconSymbol name="camera.fill" size={14} color={WiseColors.textSecondary} />
+            <Text className="font-sans-medium text-sm text-wise-text-secondary ml-1">
+              Photo
+            </Text>
+          </View>
+          <View className="rounded-xl overflow-hidden" style={{ aspectRatio: 1 }}>
+            <Image
+              source={{ uri: imageUrl || activity.originalImageUrl }}
+              style={{ width: "100%", height: "100%" }}
+              contentFit="cover"
+              transition={300}
+              placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+            />
+          </View>
         </View>
       )}
 

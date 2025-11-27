@@ -1,0 +1,48 @@
+name: Build Expo App with Bun
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    environment: Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Install EAS CLI
+        run: bun add --dev eas-cli
+
+      - name: Build Android app
+        run: eas build --platform android --profile preview --local --output ${{ github.workspace }}/app-release.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: app-apk
+          path: ${{ github.workspace }}/app-release.apk

@@ -2,6 +2,7 @@
 
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 import { action } from "../_generated/server";
 import { runAgentReasoning } from "../ai/agentReasoning";
 import { parseUserIntent } from "../ai/intentParser";
@@ -235,6 +236,7 @@ async function sendMessengerMessage(psid: string, text: string) {
 /**
  * Process image messages from Messenger
  * Analyzes food images using Gemini Vision and logs meal activities
+ * Image processing/storage happens asynchronously to not block the user
  */
 export const processImageMessage = action({
   args: {
@@ -302,7 +304,40 @@ export const processImageMessage = action({
       const mealTypeCapitalized =
         mealType.charAt(0).toUpperCase() + mealType.slice(1);
 
-      // Step 7: Log the meal activity
+      // Step 7: Process and store the image asynchronously (non-blocking)
+      // We'll log the activity first with originalImageUrl, then update with imageId
+      let imageId: Id<"_storage"> | undefined;
+      
+      // Start image processing in parallel - don't await here for non-blocking
+      const imageProcessingPromise = ctx.runAction(
+        internal.actions.imageProcessing.processAndStoreImage,
+        { imageUrl: args.imageUrl }
+      ).then(async (imageResult) => {
+        if (imageResult.success && imageResult.storageId) {
+          console.log(
+            `Image stored: ${imageResult.storageId} (${imageResult.format}, ${imageResult.sizeBytes} bytes)`
+          );
+          return imageResult.storageId as Id<"_storage">;
+        } else {
+          console.warn("Image processing failed:", imageResult.error);
+          return undefined;
+        }
+      }).catch((error) => {
+        console.error("Error processing image:", error);
+        return undefined;
+      });
+
+      // Wait for image processing to complete (with timeout)
+      try {
+        const timeoutPromise = new Promise<undefined>((resolve) => 
+          setTimeout(() => resolve(undefined), 10000) // 10 second timeout
+        );
+        imageId = await Promise.race([imageProcessingPromise, timeoutPromise]);
+      } catch (error) {
+        console.error("Image processing timed out or failed:", error);
+      }
+
+      // Step 8: Log the meal activity with image
       const result = await ctx.runMutation(
         internal.internalMutations.executeAgentAction,
         {
@@ -317,11 +352,13 @@ export const processImageMessage = action({
             notes: `Logged via photo: ${foodAnalysis.foods.join(", ")}`,
             loggedAt: args.timestamp,
             sourceType: "messenger",
+            imageId: imageId,
+            originalImageUrl: args.imageUrl,
           },
         }
       );
 
-      // Step 8: Store conversation for context
+      // Step 9: Store conversation for context
       await ctx.runMutation(internal.messengerConversations.store, {
         userId: user._id,
         userMessage: `[Image: Food photo]`,
@@ -333,6 +370,7 @@ export const processImageMessage = action({
             foodAnalysis,
             finalCalories,
             mealType,
+            imageStored: !!imageId,
           },
           confidence: foodAnalysis.confidence,
         },
@@ -344,6 +382,7 @@ export const processImageMessage = action({
               mealType,
               mealDescription: foodAnalysis.description,
               caloriesConsumed: finalCalories,
+              imageId: imageId,
             },
             success: true,
             result,
@@ -351,7 +390,7 @@ export const processImageMessage = action({
         ],
       });
 
-      // Step 9: Store embedding for RAG
+      // Step 10: Store embedding for RAG
       try {
         await ctx.runAction(internal.actions.embeddings.storeEmbeddingAction, {
           userId: user._id,
@@ -362,15 +401,17 @@ export const processImageMessage = action({
         console.error("Error storing embedding:", error);
       }
 
-      // Step 10: Send confirmation to user (friendly coach tone, no emojis/formatting)
+      // Step 11: Send confirmation to user (friendly coach tone, no emojis/formatting)
       const lowConfidenceTip =
         foodAnalysis.confidence < 0.7
           ? " Let me know if I got that wrong."
           : "";
+      
+      const imageStoredNote = imageId ? " Photo saved!" : "";
 
       await sendMessengerMessage(
         args.senderPsid,
-        `Got it, logged your ${mealType}: ${foodAnalysis.description} at around ${finalCalories} calories.${lowConfidenceTip} Keep up the good work tracking your meals!`
+        `Got it, logged your ${mealType}: ${foodAnalysis.description} at around ${finalCalories} calories.${imageStoredNote}${lowConfidenceTip} Keep up the good work tracking your meals!`
       );
     } catch (error: any) {
       console.error("Error processing image message:", error);

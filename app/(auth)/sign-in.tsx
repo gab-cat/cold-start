@@ -38,7 +38,7 @@ export default function SignInScreen() {
   }, [startOAuthFlow, router])
 
   return (
-    <AIBackground blurIntensity={70} className="flex-1">
+    <AIBackground blurIntensity={80} className="flex-1">
       <View className="flex-1 justify-between p-8">
         <AnimatedSection index={0} className="mt-20">
           <AnimatedIcon delay={100}>

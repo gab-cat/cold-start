@@ -66,6 +66,9 @@ export default defineSchema({
     timeStarted: v.optional(v.number()), // When activity actually started
     timeEnded: v.optional(v.number()), // When activity actually ended
     mood: v.optional(v.string()), // 'bad' | 'neutral' | 'good' | 'excellent'
+    // Image storage for meal photos
+    imageId: v.optional(v.id("_storage")), // Convex file storage ID for compressed image
+    originalImageUrl: v.optional(v.string()), // Original source URL (may expire)
     notes: v.string(), // "Felt great today", etc
     loggedAt: v.number(), // Timestamp user provided (might be past)
     sourceType: v.string(), // 'messenger' | 'dashboard' | 'wearable'
