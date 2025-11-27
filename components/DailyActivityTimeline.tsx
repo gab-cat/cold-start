@@ -219,14 +219,6 @@ const ActivityTimelineItem = ({ activity }: { activity: Activity }) => {
     <View className="flex-row items-start mb-4">
       {/* Timeline dot and line */}
       <View className="mr-4 items-center">
-        <View
-          className="w-3 h-3 rounded-full"
-          style={{ backgroundColor: color }}
-        />
-        <View
-          className="w-0.5 h-12 mt-2"
-          style={{ backgroundColor: `${color}30` }}
-        />
       </View>
 
       {/* Activity content */}

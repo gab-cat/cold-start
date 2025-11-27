@@ -42,7 +42,7 @@ export function GoalProgress({
       <View className="flex-row justify-between items-end mb-2">
         <View className="flex-1">
           <View className="flex-row items-center gap-2">
-            <Text className="font-sans-bold text-base text-wise-text">
+            <Text className="font-sans-medium text-base text-wise-text/70">
               {milestone}
             </Text>
             {createdBy === "ai" && (
@@ -70,7 +70,7 @@ export function GoalProgress({
       <View className="h-2 bg-wise-subtle rounded-full overflow-hidden">
         <Animated.View 
           className="h-full rounded-full"
-          style={[animatedStyle, { backgroundColor: WiseColors.success }]} 
+          style={[animatedStyle, { backgroundColor: WiseColors.accent }]} 
         />
       </View>
     </View>

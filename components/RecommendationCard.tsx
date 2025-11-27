@@ -99,7 +99,7 @@ export function RecommendationCard({ recommendation, onMarkAsRead }: Recommendat
       </View>
 
       {/* Content */}
-      <Text className="font-sans text-sm text-wise-text leading-5 mb-3">
+      <Text className="font-sans text-sm text-wise-text-secondary leading-5 mb-3">
         {recommendation.content}
       </Text>
 
